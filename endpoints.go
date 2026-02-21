@@ -2,17 +2,7 @@ package threads
 
 const (
 	threadsBaseURL = "https://www.threads.net"
-	graphqlURL     = threadsBaseURL + "/api/graphql"
 	igAppID        = "238260118697367"
-)
-
-// Doc IDs for Threads GraphQL persisted queries.
-const (
-	docIDUserProfile  = "23996318473300828"
-	docIDUserThreads  = "6232751443445612"
-	docIDUserReplies  = "6307072669391286"
-	docIDSingleThread = "5587632691339264"
-	docIDThreadLikers = "9360915773983802"
 )
 
 // threadsHeaderOrder is the header order for Threads requests.
@@ -31,6 +21,7 @@ var threadsHeaderOrder = []string{
 }
 
 // requestHeaders returns the standard headers for a Threads GraphQL POST.
+// Kept for potential future authenticated GraphQL API use.
 func requestHeaders(lsd string) map[string]string {
 	return map[string]string{
 		"accept":          "*/*",

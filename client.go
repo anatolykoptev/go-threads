@@ -2,13 +2,9 @@ package threads
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
-	"net/url"
 	"regexp"
-	"strings"
-	"sync"
 	"time"
 
 	stealth "github.com/anatolykoptev/go-stealth"
@@ -18,15 +14,11 @@ const maxRetries = 3
 
 // Client is the Threads scraping client.
 type Client struct {
-	bc    *stealth.BrowserClient
-	lsd   string
-	lsdMu sync.RWMutex
-	lsdAt time.Time
-	cfg   Config
+	bc  *stealth.BrowserClient
+	cfg Config
 }
 
 // NewClient creates a new Threads client.
-// Fetches an initial LSD token before returning.
 func NewClient(cfg Config) (*Client, error) {
 	cfg.defaults()
 
@@ -45,57 +37,22 @@ func NewClient(cfg Config) (*Client, error) {
 		return nil, fmt.Errorf("stealth client: %w", err)
 	}
 
-	c := &Client{
-		bc:  bc,
-		cfg: cfg,
-	}
-
-	if err := c.refreshLSD(); err != nil {
-		return nil, fmt.Errorf("initial LSD token: %w", err)
-	}
-
-	return c, nil
+	return &Client{bc: bc, cfg: cfg}, nil
 }
 
-// refreshLSD fetches a fresh LSD token.
-func (c *Client) refreshLSD() error {
-	token, err := fetchLSDToken(c.bc)
-	if err != nil {
-		return err
-	}
-	c.lsdMu.Lock()
-	c.lsd = token
-	c.lsdAt = time.Now()
-	c.lsdMu.Unlock()
-	return nil
+// pageHeaders returns standard headers for fetching a Threads page.
+var pageHeaders = map[string]string{
+	"accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+	"accept-language": "en-US,en;q=0.9",
+	"sec-fetch-dest":  "document",
+	"sec-fetch-mode":  "navigate",
+	"sec-fetch-site":  "none",
 }
 
-// ensureLSD refreshes the LSD token if it's stale.
-func (c *Client) ensureLSD() error {
-	c.lsdMu.RLock()
-	stale := c.lsd == "" || time.Since(c.lsdAt) > c.cfg.LSDRefreshInterval
-	c.lsdMu.RUnlock()
-	if stale {
-		return c.refreshLSD()
-	}
-	return nil
-}
-
-// getLSD returns the current LSD token.
-func (c *Client) getLSD() string {
-	c.lsdMu.RLock()
-	defer c.lsdMu.RUnlock()
-	return c.lsd
-}
-
-// doPost executes a POST to the Threads GraphQL API with retry and error recovery.
-func (c *Client) doPost(ctx context.Context, endpoint, docID string, variables map[string]any) ([]byte, error) {
+// fetchPage fetches a Threads page with retry and backoff.
+func (c *Client) fetchPage(ctx context.Context, endpoint, pageURL string) ([]byte, error) {
 	if err := stealth.DefaultJitter.Sleep(ctx); err != nil {
 		return nil, err
-	}
-
-	if err := c.ensureLSD(); err != nil {
-		return nil, fmt.Errorf("ensure LSD: %w", err)
 	}
 
 	var lastErr error
@@ -109,23 +66,7 @@ func (c *Client) doPost(ctx context.Context, endpoint, docID string, variables m
 			}
 		}
 
-		varsJSON, err := json.Marshal(variables)
-		if err != nil {
-			return nil, fmt.Errorf("marshal variables: %w", err)
-		}
-
-		lsd := c.getLSD()
-		form := url.Values{}
-		form.Set("lsd", lsd)
-		form.Set("doc_id", docID)
-		form.Set("variables", string(varsJSON))
-
-		headers := requestHeaders(lsd)
-		body, _, status, err := c.bc.DoWithHeaderOrder(
-			"POST", graphqlURL, headers,
-			strings.NewReader(form.Encode()),
-			threadsHeaderOrder,
-		)
+		body, _, status, err := c.bc.DoWithHeaderOrder("GET", pageURL, pageHeaders, nil, threadsHeaderOrder)
 		if err != nil {
 			lastErr = err
 			continue
@@ -136,48 +77,23 @@ func (c *Client) doPost(ctx context.Context, endpoint, docID string, variables m
 		case errNone:
 			c.recordMetrics(endpoint, true)
 			return body, nil
-
 		case errRateLimited:
 			c.recordMetrics(endpoint, false)
 			lastErr = &APIError{Status: status, Class: errClass, Message: "rate limited"}
 			slog.Warn("threads: 429 rate limited", slog.String("endpoint", endpoint), slog.Int("attempt", attempt+1))
 			continue
-
 		case errForbidden:
 			c.recordMetrics(endpoint, false)
-			// Refresh LSD and retry once
-			slog.Warn("threads: 403, refreshing LSD", slog.String("endpoint", endpoint))
-			if refreshErr := c.refreshLSD(); refreshErr != nil {
-				return nil, &APIError{Status: status, Class: errClass, Message: fmt.Sprintf("403 + LSD refresh failed: %v", refreshErr)}
-			}
-
-			// Retry with fresh LSD
-			lsd = c.getLSD()
-			form.Set("lsd", lsd)
-			headers = requestHeaders(lsd)
-			body2, _, status2, err2 := c.bc.DoWithHeaderOrder(
-				"POST", graphqlURL, headers,
-				strings.NewReader(form.Encode()),
-				threadsHeaderOrder,
-			)
-			if err2 != nil {
-				return nil, fmt.Errorf("403 retry: %w", err2)
-			}
-			if classifyHTTPStatus(status2) != errNone {
-				return nil, &APIError{Status: status2, Class: classifyHTTPStatus(status2), Message: "403 retry failed (likely IP ban)"}
-			}
-			c.recordMetrics(endpoint, true)
-			return body2, nil
-
+			lastErr = &APIError{Status: status, Class: errClass, Message: "forbidden (likely IP ban)"}
+			continue
 		case errServerError:
 			c.recordMetrics(endpoint, false)
-			lastErr = &APIError{Status: status, Class: errClass, Message: fmt.Sprintf("server error: %s", truncateBytes(body, 200))}
+			lastErr = &APIError{Status: status, Class: errClass, Message: "server error"}
 			slog.Warn("threads: server error", slog.String("endpoint", endpoint), slog.Int("status", status))
 			continue
-
 		default:
 			c.recordMetrics(endpoint, false)
-			return nil, &APIError{Status: status, Class: errClass, Message: truncateBytes(body, 200)}
+			return nil, &APIError{Status: status, Class: errClass, Message: fmt.Sprintf("HTTP %d", status)}
 		}
 	}
 
@@ -197,33 +113,19 @@ func (c *Client) recordMetrics(endpoint string, success bool) {
 var userIDRe = regexp.MustCompile(`"user_id":"(\d+)"`)
 
 // resolveUsername fetches the userID for a given username by scraping the profile page.
-func (c *Client) resolveUsername(ctx context.Context, username string) (string, error) {
-	if err := stealth.DefaultJitter.Sleep(ctx); err != nil {
-		return "", err
-	}
-
+// Returns (userID, rawHTML, error) — HTML is returned for reuse by callers.
+func (c *Client) resolveUsername(ctx context.Context, username string) (string, []byte, error) {
 	profileURL := threadsBaseURL + "/@" + username
-	headers := map[string]string{
-		"accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-		"accept-language": "en-US,en;q=0.9",
-		"sec-fetch-dest":  "document",
-		"sec-fetch-mode":  "navigate",
-		"sec-fetch-site":  "none",
-	}
-
-	body, _, status, err := c.bc.DoWithHeaderOrder("GET", profileURL, headers, nil, threadsHeaderOrder)
+	body, err := c.fetchPage(ctx, "ResolveUsername", profileURL)
 	if err != nil {
-		return "", fmt.Errorf("resolve username %q: %w", username, err)
-	}
-	if status != 200 {
-		return "", fmt.Errorf("resolve username %q: HTTP %d", username, status)
+		return "", nil, fmt.Errorf("resolve username %q: %w", username, err)
 	}
 
 	matches := userIDRe.FindSubmatch(body)
 	if len(matches) < 2 {
-		return "", fmt.Errorf("user_id not found in page for @%s", username)
+		return "", nil, fmt.Errorf("user_id not found in page for @%s", username)
 	}
-	return string(matches[1]), nil
+	return string(matches[1]), body, nil
 }
 
 func truncateBytes(b []byte, n int) string {

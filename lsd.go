@@ -10,15 +10,10 @@ import (
 var lsdRe = regexp.MustCompile(`LSD",\[\],\{"token":"([^"]+)"\}`)
 
 // fetchLSDToken fetches the LSD token from the Threads homepage HTML.
+// Currently unused — the SSR approach doesn't need it — but kept for
+// potential future GraphQL API use if Meta re-enables unauthenticated access.
 func fetchLSDToken(bc *stealth.BrowserClient) (string, error) {
-	headers := map[string]string{
-		"accept":          "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-		"accept-language": "en-US,en;q=0.9",
-		"sec-fetch-dest":  "document",
-		"sec-fetch-mode":  "navigate",
-		"sec-fetch-site":  "none",
-	}
-	body, _, status, err := bc.DoWithHeaderOrder("GET", threadsBaseURL+"/@instagram", headers, nil, threadsHeaderOrder)
+	body, _, status, err := bc.DoWithHeaderOrder("GET", threadsBaseURL+"/@instagram", pageHeaders, nil, threadsHeaderOrder)
 	if err != nil {
 		return "", fmt.Errorf("fetch LSD page: %w", err)
 	}

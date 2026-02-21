@@ -3,6 +3,7 @@ package threads
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 )
 
@@ -15,17 +16,11 @@ type rawUser struct {
 	Biography             string      `json:"biography"`
 	ProfilePicURL         string      `json:"profile_pic_url"`
 	IsVerified            bool        `json:"is_verified"`
-	IsPrivate             bool        `json:"is_private"`
+	IsPrivate             bool        `json:"text_post_app_is_private"`
 	FollowerCount         int         `json:"follower_count"`
 	FollowingCount        int         `json:"following_count"`
-	ThreadsPublishedCount int         `json:"threads_published_count,omitempty"`
-
-	// Alternative field names seen in different response shapes
-	HdProfilePicVersions []struct {
-		URL    string `json:"url"`
-		Width  int    `json:"width"`
-		Height int    `json:"height"`
-	} `json:"hd_profile_pic_versions,omitempty"`
+	ThreadCount           int         `json:"text_post_app_threads_count,omitempty"`
+	HdProfilePicVersions  []rawImageVersion `json:"hd_profile_pic_versions,omitempty"`
 }
 
 type rawImageVersion struct {
@@ -48,20 +43,18 @@ type rawPost struct {
 	Caption   *struct {
 		Text string `json:"text"`
 	} `json:"caption"`
-	TakenAt           json.Number      `json:"taken_at"`
-	LikeCount         int              `json:"like_count"`
-	TextPostAppInfo   *rawTextPostInfo `json:"text_post_app_info"`
-	MediaType         int              `json:"media_type"`
-	ImageVersions2    *rawImageSet     `json:"image_versions2"`
-	VideoVersions     []rawVideoVersion `json:"video_versions"`
-	CarouselMedia     []rawCarouselItem `json:"carousel_media"`
-	OriginalWidth     int              `json:"original_width"`
-	OriginalHeight    int              `json:"original_height"`
+	TakenAt         json.Number      `json:"taken_at"`
+	LikeCount       int              `json:"like_count"`
+	TextPostAppInfo *rawTextPostInfo `json:"text_post_app_info"`
+	MediaType       int              `json:"media_type"`
+	ImageVersions2  *rawImageSet     `json:"image_versions2"`
+	VideoVersions   []rawVideoVersion `json:"video_versions"`
+	CarouselMedia   []rawCarouselItem `json:"carousel_media"`
 }
 
 type rawTextPostInfo struct {
-	IsReply     bool `json:"is_reply,omitempty"`
-	ReplyCount  int  `json:"direct_reply_count,omitempty"`
+	IsReply    bool `json:"is_reply,omitempty"`
+	ReplyCount int  `json:"direct_reply_count,omitempty"`
 }
 
 type rawImageSet struct {
@@ -78,33 +71,148 @@ type rawThreadItem struct {
 	Post rawPost `json:"post"`
 }
 
-type rawThread struct {
-	ThreadItems []rawThreadItem `json:"thread_items"`
+// --- SSR extraction ---
+
+const ssrDataPrefix = `"result":{"data":`
+
+// extractSSRBlocks finds all SSR data blocks in the HTML.
+// Threads embeds preloaded query results as:
+//   "result":{"data":{...}},"sequence_number":N
+// We find each "result":{"data": prefix and extract the nested JSON object
+// using brace-depth counting (regex won't work for nested JSON).
+func extractSSRBlocks(html []byte) [][]byte {
+	s := string(html)
+	var blocks [][]byte
+	searchFrom := 0
+
+	for {
+		idx := indexAt(s, ssrDataPrefix, searchFrom)
+		if idx < 0 {
+			break
+		}
+		// Position right after "result":{"data": — this is where the data object starts
+		dataStart := idx + len(ssrDataPrefix)
+		if dataStart >= len(s) || s[dataStart] != '{' {
+			searchFrom = dataStart
+			continue
+		}
+
+		// Extract the JSON object using brace-depth counting
+		depth := 0
+		dataEnd := -1
+	scan:
+		for i := dataStart; i < len(s); i++ {
+			switch s[i] {
+			case '{':
+				depth++
+			case '}':
+				depth--
+				if depth == 0 {
+					dataEnd = i + 1
+					break scan
+				}
+			case '"':
+				// Skip string contents (may contain braces)
+				i++
+				for i < len(s) && s[i] != '"' {
+					if s[i] == '\\' {
+						i++ // skip escaped char
+					}
+					i++
+				}
+			}
+		}
+
+		if dataEnd > dataStart {
+			blocks = append(blocks, []byte(s[dataStart:dataEnd]))
+		}
+		searchFrom = max(dataEnd, dataStart+1)
+	}
+	return blocks
 }
 
-// --- Parsers ---
+// indexAt is like strings.Index but starts searching from a given offset.
+func indexAt(s, substr string, from int) int {
+	if from >= len(s) {
+		return -1
+	}
+	idx := strings.Index(s[from:], substr)
+	if idx < 0 {
+		return -1
+	}
+	return from + idx
+}
 
-// parseUser parses a GetUser (user profile) response.
+// --- SSR Parsers ---
+
+// parseUserFromSSR extracts user profile data from SSR HTML.
+func parseUserFromSSR(html []byte) (*ThreadsUser, error) {
+	for _, block := range extractSSRBlocks(html) {
+		var probe struct {
+			User *rawUser `json:"user"`
+		}
+		if json.Unmarshal(block, &probe) == nil && probe.User != nil && probe.User.Username != "" {
+			return convertUser(*probe.User), nil
+		}
+	}
+	return nil, fmt.Errorf("user data not found in SSR HTML")
+}
+
+// parseThreadsFromSSR extracts thread/post data from SSR HTML.
+func parseThreadsFromSSR(html []byte) ([]*Thread, error) {
+	for _, block := range extractSSRBlocks(html) {
+		var probe struct {
+			MediaData *struct {
+				Edges []struct {
+					Node struct {
+						ThreadItems []rawThreadItem `json:"thread_items"`
+					} `json:"node"`
+				} `json:"edges"`
+			} `json:"mediaData"`
+		}
+		if json.Unmarshal(block, &probe) == nil && probe.MediaData != nil && len(probe.MediaData.Edges) > 0 {
+			var threads []*Thread
+			for _, edge := range probe.MediaData.Edges {
+				t := &Thread{}
+				for _, item := range edge.Node.ThreadItems {
+					t.Items = append(t.Items, convertPost(item.Post))
+				}
+				if len(t.Items) > 0 {
+					threads = append(threads, t)
+				}
+			}
+			return threads, nil
+		}
+	}
+	return nil, fmt.Errorf("thread data not found in SSR HTML")
+}
+
+// --- Legacy GraphQL parsers (kept for potential future use with authenticated API) ---
+
+// parseUser parses a GetUser GraphQL response.
 func parseUser(body []byte) (*ThreadsUser, error) {
 	var raw struct {
 		Data struct {
-			UserData struct {
-				User rawUser `json:"user"`
-			} `json:"userData"`
+			User *rawUser `json:"user"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil, fmt.Errorf("unmarshal user: %w", err)
 	}
-	return convertUser(raw.Data.UserData.User), nil
+	if raw.Data.User == nil {
+		return nil, fmt.Errorf("user data is null")
+	}
+	return convertUser(*raw.Data.User), nil
 }
 
-// parseUserThreads parses a GetUserThreads or GetUserReplies response.
+// parseUserThreads parses a GetUserThreads GraphQL response.
 func parseUserThreads(body []byte) ([]*Thread, error) {
 	var raw struct {
 		Data struct {
 			MediaData struct {
-				Threads []rawThread `json:"threads"`
+				Threads []struct {
+					ThreadItems []rawThreadItem `json:"thread_items"`
+				} `json:"threads"`
 			} `json:"mediaData"`
 		} `json:"data"`
 	}
@@ -114,7 +222,10 @@ func parseUserThreads(body []byte) ([]*Thread, error) {
 
 	var threads []*Thread
 	for _, rt := range raw.Data.MediaData.Threads {
-		t := convertThread(rt)
+		t := &Thread{}
+		for _, item := range rt.ThreadItems {
+			t.Items = append(t.Items, convertPost(item.Post))
+		}
 		if len(t.Items) > 0 {
 			threads = append(threads, t)
 		}
@@ -122,14 +233,17 @@ func parseUserThreads(body []byte) ([]*Thread, error) {
 	return threads, nil
 }
 
-// parseThread parses a GetThread (single thread + replies) response.
-// Returns (main thread, reply threads, error).
+// parseThread parses a GetThread (single thread + replies) GraphQL response.
 func parseThread(body []byte) (*Thread, []*Thread, error) {
 	var raw struct {
 		Data struct {
 			Data struct {
-				ContainingThread rawThread   `json:"containing_thread"`
-				ReplyThreads     []rawThread `json:"reply_threads"`
+				ContainingThread struct {
+					ThreadItems []rawThreadItem `json:"thread_items"`
+				} `json:"containing_thread"`
+				ReplyThreads []struct {
+					ThreadItems []rawThreadItem `json:"thread_items"`
+				} `json:"reply_threads"`
 			} `json:"data"`
 		} `json:"data"`
 	}
@@ -137,11 +251,17 @@ func parseThread(body []byte) (*Thread, []*Thread, error) {
 		return nil, nil, fmt.Errorf("unmarshal thread: %w", err)
 	}
 
-	main := convertThread(raw.Data.Data.ContainingThread)
+	main := &Thread{}
+	for _, item := range raw.Data.Data.ContainingThread.ThreadItems {
+		main.Items = append(main.Items, convertPost(item.Post))
+	}
 
 	var replies []*Thread
 	for _, rt := range raw.Data.Data.ReplyThreads {
-		t := convertThread(rt)
+		t := &Thread{}
+		for _, item := range rt.ThreadItems {
+			t.Items = append(t.Items, convertPost(item.Post))
+		}
 		if len(t.Items) > 0 {
 			replies = append(replies, t)
 		}
@@ -149,7 +269,7 @@ func parseThread(body []byte) (*Thread, []*Thread, error) {
 	return main, replies, nil
 }
 
-// parseLikers parses a GetThreadLikers response.
+// parseLikers parses a GetThreadLikers GraphQL response.
 func parseLikers(body []byte) ([]*ThreadsUser, error) {
 	var raw struct {
 		Data struct {
@@ -186,16 +306,8 @@ func convertUser(ru rawUser) *ThreadsUser {
 		IsPrivate:      ru.IsPrivate,
 		FollowerCount:  ru.FollowerCount,
 		FollowingCount: ru.FollowingCount,
-		ThreadCount:    ru.ThreadsPublishedCount,
+		ThreadCount:    ru.ThreadCount,
 	}
-}
-
-func convertThread(rt rawThread) *Thread {
-	t := &Thread{}
-	for _, item := range rt.ThreadItems {
-		t.Items = append(t.Items, convertPost(item.Post))
-	}
-	return t
 }
 
 func convertPost(rp rawPost) Post {
@@ -220,43 +332,24 @@ func convertPost(rp rawPost) Post {
 		p.ReplyCount = rp.TextPostAppInfo.ReplyCount
 	}
 
-	// Images
 	if rp.ImageVersions2 != nil {
 		for _, img := range rp.ImageVersions2.Candidates {
-			p.Images = append(p.Images, MediaVersion{
-				URL:    img.URL,
-				Width:  img.Width,
-				Height: img.Height,
-			})
+			p.Images = append(p.Images, MediaVersion{URL: img.URL, Width: img.Width, Height: img.Height})
 		}
 	}
 
-	// Videos
 	for _, vid := range rp.VideoVersions {
-		p.Videos = append(p.Videos, MediaVersion{
-			URL:    vid.URL,
-			Width:  vid.Width,
-			Height: vid.Height,
-		})
+		p.Videos = append(p.Videos, MediaVersion{URL: vid.URL, Width: vid.Width, Height: vid.Height})
 	}
 
-	// Carousel items
 	for _, ci := range rp.CarouselMedia {
 		if ci.ImageVersions2 != nil {
 			for _, img := range ci.ImageVersions2.Candidates {
-				p.Images = append(p.Images, MediaVersion{
-					URL:    img.URL,
-					Width:  img.Width,
-					Height: img.Height,
-				})
+				p.Images = append(p.Images, MediaVersion{URL: img.URL, Width: img.Width, Height: img.Height})
 			}
 		}
 		for _, vid := range ci.VideoVersions {
-			p.Videos = append(p.Videos, MediaVersion{
-				URL:    vid.URL,
-				Width:  vid.Width,
-				Height: vid.Height,
-			})
+			p.Videos = append(p.Videos, MediaVersion{URL: vid.URL, Width: vid.Width, Height: vid.Height})
 		}
 	}
 

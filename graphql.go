@@ -2,47 +2,43 @@ package threads
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 )
 
-// GetUser fetches a user profile by username (resolves to userID internally).
+// GetUser fetches a user profile by username.
+// Extracts data from the SSR-rendered profile page.
 func (c *Client) GetUser(ctx context.Context, username string) (*ThreadsUser, error) {
-	userID, err := c.resolveUsername(ctx, username)
+	_, html, err := c.resolveUsername(ctx, username)
 	if err != nil {
 		return nil, fmt.Errorf("GetUser: %w", err)
 	}
-	return c.GetUserByID(ctx, userID)
+	user, err := parseUserFromSSR(html)
+	if err != nil {
+		return nil, fmt.Errorf("GetUser: %w", err)
+	}
+	return user, nil
 }
 
 // GetUserByID fetches a user profile by numeric userID.
+// Note: requires an extra request since we need the username for the page URL.
+// Prefer GetUser(username) when the username is known.
 func (c *Client) GetUserByID(ctx context.Context, userID string) (*ThreadsUser, error) {
-	variables := map[string]any{"userID": userID}
-	body, err := c.doPost(ctx, "GetUser", docIDUserProfile, variables)
-	if err != nil {
-		return nil, fmt.Errorf("GetUserByID: %w", err)
-	}
-	return parseUser(body)
+	// Threads doesn't expose a direct userID→profile page mapping.
+	// The SSR approach requires a username. This method is kept for API
+	// compatibility but callers should prefer GetUser() with a username.
+	return nil, fmt.Errorf("GetUserByID: not supported in SSR mode, use GetUser(username) instead")
 }
 
 // GetUserThreads fetches recent threads by username.
 func (c *Client) GetUserThreads(ctx context.Context, username string, count int) ([]*Thread, error) {
-	userID, err := c.resolveUsername(ctx, username)
+	_, html, err := c.resolveUsername(ctx, username)
 	if err != nil {
 		return nil, fmt.Errorf("GetUserThreads: %w", err)
 	}
-	return c.GetUserThreadsByID(ctx, userID, count)
-}
-
-// GetUserThreadsByID fetches recent threads by numeric userID.
-func (c *Client) GetUserThreadsByID(ctx context.Context, userID string, count int) ([]*Thread, error) {
-	variables := map[string]any{"userID": userID}
-	body, err := c.doPost(ctx, "GetUserThreads", docIDUserThreads, variables)
+	threads, err := parseThreadsFromSSR(html)
 	if err != nil {
-		return nil, fmt.Errorf("GetUserThreadsByID: %w", err)
-	}
-	threads, err := parseUserThreads(body)
-	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("GetUserThreads: %w", err)
 	}
 	if count > 0 && len(threads) > count {
 		threads = threads[:count]
@@ -50,51 +46,72 @@ func (c *Client) GetUserThreadsByID(ctx context.Context, userID string, count in
 	return threads, nil
 }
 
-// GetUserReplies fetches recent replies by username.
-func (c *Client) GetUserReplies(ctx context.Context, username string, count int) ([]*Thread, error) {
-	userID, err := c.resolveUsername(ctx, username)
+// GetUserWithThreads fetches both user profile and threads in a single request.
+// More efficient than calling GetUser + GetUserThreads separately.
+func (c *Client) GetUserWithThreads(ctx context.Context, username string, count int) (*ThreadsUser, []*Thread, error) {
+	_, html, err := c.resolveUsername(ctx, username)
 	if err != nil {
-		return nil, fmt.Errorf("GetUserReplies: %w", err)
+		return nil, nil, fmt.Errorf("GetUserWithThreads: %w", err)
 	}
-	variables := map[string]any{"userID": userID}
-	body, err := c.doPost(ctx, "GetUserReplies", docIDUserReplies, variables)
+
+	user, err := parseUserFromSSR(html)
 	if err != nil {
-		return nil, fmt.Errorf("GetUserReplies: %w", err)
+		return nil, nil, fmt.Errorf("GetUserWithThreads user: %w", err)
 	}
-	threads, err := parseUserThreads(body)
+
+	threads, err := parseThreadsFromSSR(html)
 	if err != nil {
-		return nil, err
+		// User exists but threads might be empty — return user with nil threads
+		return user, nil, nil
 	}
 	if count > 0 && len(threads) > count {
 		threads = threads[:count]
 	}
-	return threads, nil
+	return user, threads, nil
 }
 
-// GetThread fetches a single thread and its replies.
-// Returns (original thread, replies, error).
-func (c *Client) GetThread(ctx context.Context, postID string) (*Thread, []*Thread, error) {
-	variables := map[string]any{"postID": postID}
-	body, err := c.doPost(ctx, "GetThread", docIDSingleThread, variables)
+// GetThread fetches a single thread and its replies by post code.
+// The code is the short identifier in the URL: threads.net/@user/post/{code}
+func (c *Client) GetThread(ctx context.Context, username, postCode string) (*Thread, []*Thread, error) {
+	postURL := fmt.Sprintf("%s/@%s/post/%s", threadsBaseURL, username, postCode)
+	html, err := c.fetchPage(ctx, "GetThread", postURL)
 	if err != nil {
 		return nil, nil, fmt.Errorf("GetThread: %w", err)
 	}
-	return parseThread(body)
+	return parseThreadFromSSR(html)
 }
 
-// GetThreadLikers fetches users who liked a thread.
-func (c *Client) GetThreadLikers(ctx context.Context, mediaID string, count int) ([]*ThreadsUser, error) {
-	variables := map[string]any{"mediaID": mediaID}
-	body, err := c.doPost(ctx, "GetThreadLikers", docIDThreadLikers, variables)
-	if err != nil {
-		return nil, fmt.Errorf("GetThreadLikers: %w", err)
+// parseThreadFromSSR extracts a single thread + replies from SSR HTML.
+func parseThreadFromSSR(html []byte) (*Thread, []*Thread, error) {
+	for _, block := range extractSSRBlocks(html) {
+		var probe struct {
+			ContainingThread *struct {
+				ThreadItems []rawThreadItem `json:"thread_items"`
+			} `json:"containing_thread"`
+			ReplyThreads []struct {
+				ThreadItems []rawThreadItem `json:"thread_items"`
+			} `json:"reply_threads"`
+		}
+		if json.Unmarshal(block, &probe) != nil || probe.ContainingThread == nil {
+			continue
+		}
+
+		main := &Thread{}
+		for _, item := range probe.ContainingThread.ThreadItems {
+			main.Items = append(main.Items, convertPost(item.Post))
+		}
+
+		var replies []*Thread
+		for _, rt := range probe.ReplyThreads {
+			t := &Thread{}
+			for _, item := range rt.ThreadItems {
+				t.Items = append(t.Items, convertPost(item.Post))
+			}
+			if len(t.Items) > 0 {
+				replies = append(replies, t)
+			}
+		}
+		return main, replies, nil
 	}
-	users, err := parseLikers(body)
-	if err != nil {
-		return nil, err
-	}
-	if count > 0 && len(users) > count {
-		users = users[:count]
-	}
-	return users, nil
+	return nil, nil, fmt.Errorf("thread data not found in SSR HTML")
 }
