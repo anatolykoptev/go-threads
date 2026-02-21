@@ -1,9 +1,10 @@
 package threads
 
 const (
-	threadsBaseURL = "https://www.threads.net"
-	igBaseURL      = "https://i.instagram.com"
-	igAppID        = "238260118697367"
+	threadsBaseURL    = "https://www.threads.net"
+	threadsGQLBaseURL = "https://www.threads.com"
+	igBaseURL         = "https://i.instagram.com"
+	igAppID           = "238260118697367"
 
 	// GraphQL doc IDs
 	docIDGetThreadLikers = "9360915773983802"
@@ -32,25 +33,26 @@ var threadsHeaderOrder = []string{
 	"accept",
 	"accept-language",
 	"content-type",
+	"cookie",
 	"origin",
 	"referer",
 	"sec-fetch-dest",
 	"sec-fetch-mode",
 	"sec-fetch-site",
 	"user-agent",
+	"x-csrftoken",
 	"x-fb-lsd",
 	"x-ig-app-id",
 }
 
 // requestHeaders returns the standard headers for a Threads GraphQL POST.
-// Kept for potential future authenticated GraphQL API use.
 func requestHeaders(lsd string) map[string]string {
 	return map[string]string{
 		"accept":          "*/*",
 		"accept-language": "en-US,en;q=0.9",
 		"content-type":    "application/x-www-form-urlencoded",
-		"origin":          threadsBaseURL,
-		"referer":         threadsBaseURL + "/",
+		"origin":          threadsGQLBaseURL,
+		"referer":         threadsGQLBaseURL + "/",
 		"sec-fetch-dest":  "empty",
 		"sec-fetch-mode":  "cors",
 		"sec-fetch-site":  "same-origin",

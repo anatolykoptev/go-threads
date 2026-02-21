@@ -167,15 +167,16 @@ func (c *Client) GetThreadLikers(ctx context.Context, threadID string, count int
 
 // SearchUsers searches for users by query string.
 func (c *Client) SearchUsers(ctx context.Context, query string, count int) ([]*ThreadsUser, error) {
+	isLoggedIn := c.cfg.SessionID != ""
 	variables := map[string]any{
 		"query": query,
 		"first": count,
-		"should_fetch_ig_inactive_on_text_app":                    nil,
-		"should_fetch_friendship_status":                          false,
-		"should_fetch_fediverse_profiles":                         false,
-		"hide_unconnected_private":                                false,
-		"__relay_internal__pv__BarcelonaIsLoggedInrelayprovider":  false,
-		"__relay_internal__pv__BarcelonaIsCrawlerrelayprovider":   false,
+		"should_fetch_ig_inactive_on_text_app":                        nil,
+		"should_fetch_friendship_status":                              isLoggedIn,
+		"should_fetch_fediverse_profiles":                             false,
+		"hide_unconnected_private":                                    false,
+		"__relay_internal__pv__BarcelonaIsLoggedInrelayprovider":      isLoggedIn,
+		"__relay_internal__pv__BarcelonaIsCrawlerrelayprovider":       false,
 		"__relay_internal__pv__BarcelonaHasDisplayNamesrelayprovider": false,
 	}
 	body, err := c.doGraphQL(ctx, "SearchUsers", docIDSearchUsers, variables)

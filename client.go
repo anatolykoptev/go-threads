@@ -26,6 +26,7 @@ type Client struct {
 
 	// LSD token state
 	lsd   string
+	csrf  string
 	lsdMu sync.Mutex
 	lsdAt time.Time
 
@@ -77,6 +78,9 @@ func NewClient(cfg Config) (*Client, error) {
 	c := &Client{bc: bc, cfg: cfg}
 	if cfg.Token != "" {
 		c.token = cfg.Token
+	}
+	if cfg.CSRFToken != "" {
+		c.csrf = cfg.CSRFToken
 	}
 	return c, nil
 }
@@ -206,6 +210,12 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID string, variable
 	bodyStr := form.Encode()
 
 	headers := requestHeaders(lsd)
+	if cookies := c.buildCookieHeader(); cookies != "" {
+		headers["cookie"] = cookies
+		if c.csrf != "" {
+			headers["x-csrftoken"] = c.csrf
+		}
+	}
 	var lastErr error
 	for attempt := range maxRetries {
 		if attempt > 0 {
@@ -219,7 +229,7 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID string, variable
 
 		respBody, _, status, doErr := c.bc.DoWithHeaderOrder(
 			"POST",
-			threadsBaseURL+"/api/graphql",
+			threadsGQLBaseURL+"/api/graphql",
 			headers,
 			strings.NewReader(bodyStr),
 			threadsHeaderOrder,
@@ -409,6 +419,30 @@ func (c *Client) doPrivateGET(ctx context.Context, endpoint, path string, params
 		return nil, fmt.Errorf("%s failed after %d attempts: %w", endpoint, maxRetries, lastErr)
 	}
 	return nil, fmt.Errorf("%s failed after %d attempts", endpoint, maxRetries)
+}
+
+// buildCookieHeader constructs the Cookie header from all configured cookies.
+func (c *Client) buildCookieHeader() string {
+	var parts []string
+	if c.cfg.SessionID != "" {
+		parts = append(parts, "sessionid="+c.cfg.SessionID)
+	}
+	if c.cfg.DSUserID != "" {
+		parts = append(parts, "ds_user_id="+c.cfg.DSUserID)
+	}
+	if c.csrf != "" {
+		parts = append(parts, "csrftoken="+c.csrf)
+	}
+	if c.cfg.IGDID != "" {
+		parts = append(parts, "ig_did="+c.cfg.IGDID)
+	}
+	if c.cfg.MID != "" {
+		parts = append(parts, "mid="+c.cfg.MID)
+	}
+	if len(parts) == 0 {
+		return ""
+	}
+	return strings.Join(parts, "; ")
 }
 
 func truncateBytes(b []byte, n int) string {

@@ -14,6 +14,7 @@ const lsdTTL = 30 * time.Minute
 var lsdRe = regexp.MustCompile(`LSD",\[\],\{"token":"([^"]+)"\}`)
 
 // ensureLSD returns a cached LSD token or fetches a new one.
+// Also captures csrftoken from response cookies for GraphQL auth.
 func (c *Client) ensureLSD(ctx context.Context) (string, error) {
 	c.lsdMu.Lock()
 	defer c.lsdMu.Unlock()
@@ -22,28 +23,45 @@ func (c *Client) ensureLSD(ctx context.Context) (string, error) {
 		return c.lsd, nil
 	}
 
-	token, err := fetchLSDToken(c.bc)
+	token, csrf, err := fetchLSDToken(c.bc)
 	if err != nil {
 		return "", err
 	}
 	c.lsd = token
+	if csrf != "" {
+		c.csrf = csrf
+	}
 	c.lsdAt = time.Now()
 	return token, nil
 }
 
-// fetchLSDToken fetches the LSD token from the Threads homepage HTML.
-func fetchLSDToken(bc *stealth.BrowserClient) (string, error) {
-	body, _, status, err := bc.DoWithHeaderOrder("GET", threadsBaseURL+"/@instagram", pageHeaders, nil, threadsHeaderOrder)
-	if err != nil {
-		return "", fmt.Errorf("fetch LSD page: %w", err)
+var csrfRe = regexp.MustCompile(`csrftoken=([^;]+)`)
+
+// fetchLSDToken fetches the LSD token and csrftoken from a Threads page.
+func fetchLSDToken(bc *stealth.BrowserClient) (lsd string, csrf string, err error) {
+	body, respHeaders, status, reqErr := bc.DoWithHeaderOrder("GET", threadsBaseURL+"/@instagram", pageHeaders, nil, threadsHeaderOrder)
+	if reqErr != nil {
+		return "", "", fmt.Errorf("fetch LSD page: %w", reqErr)
 	}
 	if status != 200 {
-		return "", fmt.Errorf("fetch LSD page: HTTP %d", status)
+		return "", "", fmt.Errorf("fetch LSD page: HTTP %d", status)
 	}
 
 	matches := lsdRe.FindSubmatch(body)
 	if len(matches) < 2 {
-		return "", fmt.Errorf("LSD token not found in page HTML")
+		return "", "", fmt.Errorf("LSD token not found in page HTML")
 	}
-	return string(matches[1]), nil
+	lsd = string(matches[1])
+
+	// Extract csrftoken from Set-Cookie header
+	for _, key := range []string{"set-cookie", "Set-Cookie"} {
+		if cookie, ok := respHeaders[key]; ok {
+			if m := csrfRe.FindStringSubmatch(cookie); len(m) >= 2 {
+				csrf = m[1]
+				break
+			}
+		}
+	}
+
+	return lsd, csrf, nil
 }
