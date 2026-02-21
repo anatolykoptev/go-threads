@@ -1,17 +1,37 @@
 package threads
 
 import (
+	"context"
 	"fmt"
 	"regexp"
+	"time"
 
 	stealth "github.com/anatolykoptev/go-stealth"
 )
 
+const lsdTTL = 30 * time.Minute
+
 var lsdRe = regexp.MustCompile(`LSD",\[\],\{"token":"([^"]+)"\}`)
 
+// ensureLSD returns a cached LSD token or fetches a new one.
+func (c *Client) ensureLSD(ctx context.Context) (string, error) {
+	c.lsdMu.Lock()
+	defer c.lsdMu.Unlock()
+
+	if c.lsd != "" && time.Since(c.lsdAt) < lsdTTL {
+		return c.lsd, nil
+	}
+
+	token, err := fetchLSDToken(c.bc)
+	if err != nil {
+		return "", err
+	}
+	c.lsd = token
+	c.lsdAt = time.Now()
+	return token, nil
+}
+
 // fetchLSDToken fetches the LSD token from the Threads homepage HTML.
-// Currently unused — the SSR approach doesn't need it — but kept for
-// potential future GraphQL API use if Meta re-enables unauthenticated access.
 func fetchLSDToken(bc *stealth.BrowserClient) (string, error) {
 	body, _, status, err := bc.DoWithHeaderOrder("GET", threadsBaseURL+"/@instagram", pageHeaders, nil, threadsHeaderOrder)
 	if err != nil {

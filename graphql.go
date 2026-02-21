@@ -124,3 +124,70 @@ func parseThreadFromSSR(html []byte) (*Thread, []*Thread, error) {
 	}
 	return nil, nil, fmt.Errorf("thread data not found in SSR HTML")
 }
+
+// --- SSR-based GraphQL methods ---
+
+// GetUserReplies fetches reply threads by username from the replies page.
+func (c *Client) GetUserReplies(ctx context.Context, username string, count int) ([]*Thread, error) {
+	repliesURL := threadsBaseURL + "/@" + username + "/replies"
+	html, err := c.fetchPage(ctx, "GetUserReplies", repliesURL)
+	if err != nil {
+		return nil, fmt.Errorf("GetUserReplies: %w", err)
+	}
+	threads, err := parseThreadsFromSSR(html)
+	if err != nil {
+		return nil, fmt.Errorf("GetUserReplies: %w", err)
+	}
+	if count > 0 && len(threads) > count {
+		threads = threads[:count]
+	}
+	return threads, nil
+}
+
+// --- GraphQL API methods ---
+
+// GetThreadLikers fetches users who liked a thread by its ID.
+func (c *Client) GetThreadLikers(ctx context.Context, threadID string, count int) ([]*ThreadsUser, error) {
+	variables := map[string]any{
+		"mediaID": threadID,
+	}
+	body, err := c.doGraphQL(ctx, "GetThreadLikers", docIDGetThreadLikers, variables)
+	if err != nil {
+		return nil, fmt.Errorf("GetThreadLikers: %w", err)
+	}
+	users, err := parseLikers(body)
+	if err != nil {
+		return nil, fmt.Errorf("GetThreadLikers: %w", err)
+	}
+	if count > 0 && len(users) > count {
+		users = users[:count]
+	}
+	return users, nil
+}
+
+// SearchUsers searches for users by query string.
+func (c *Client) SearchUsers(ctx context.Context, query string, count int) ([]*ThreadsUser, error) {
+	variables := map[string]any{
+		"query": query,
+		"first": count,
+		"should_fetch_ig_inactive_on_text_app":                    nil,
+		"should_fetch_friendship_status":                          false,
+		"should_fetch_fediverse_profiles":                         false,
+		"hide_unconnected_private":                                false,
+		"__relay_internal__pv__BarcelonaIsLoggedInrelayprovider":  false,
+		"__relay_internal__pv__BarcelonaIsCrawlerrelayprovider":   false,
+		"__relay_internal__pv__BarcelonaHasDisplayNamesrelayprovider": false,
+	}
+	body, err := c.doGraphQL(ctx, "SearchUsers", docIDSearchUsers, variables)
+	if err != nil {
+		return nil, fmt.Errorf("SearchUsers: %w", err)
+	}
+	users, err := parseSearchUsers(body)
+	if err != nil {
+		return nil, fmt.Errorf("SearchUsers: %w", err)
+	}
+	if count > 0 && len(users) > count {
+		users = users[:count]
+	}
+	return users, nil
+}

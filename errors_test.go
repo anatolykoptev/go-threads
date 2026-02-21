@@ -51,6 +51,15 @@ func TestAPIError(t *testing.T) {
 		t.Error("IsRateLimited = true, want false")
 	}
 
+	// Login redirect
+	err3 := &APIError{Status: 200, Class: errLoginRedirect, Message: "login redirect"}
+	if !IsLoginRedirect(err3) {
+		t.Error("IsLoginRedirect = false, want true")
+	}
+	if IsRateLimited(err3) {
+		t.Error("IsRateLimited(loginRedirect) = true, want false")
+	}
+
 	// Non-APIError
 	plainErr := errors.New("some error")
 	if IsRateLimited(plainErr) {
@@ -58,5 +67,29 @@ func TestAPIError(t *testing.T) {
 	}
 	if IsForbidden(plainErr) {
 		t.Error("IsForbidden(plainErr) = true")
+	}
+	if IsLoginRedirect(plainErr) {
+		t.Error("IsLoginRedirect(plainErr) = true")
+	}
+}
+
+func TestIsLoginRedirect(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+		want bool
+	}{
+		{"accounts login path", `<html><meta http-equiv="refresh" content="0;url=/accounts/login"/></html>`, true},
+		{"require_login json", `{"require_login":true,"status":"fail"}`, true},
+		{"normal page", `<html><body>Hello Threads</body></html>`, false},
+		{"empty body", "", false},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := isLoginRedirect([]byte(tt.body))
+			if got != tt.want {
+				t.Errorf("isLoginRedirect = %v, want %v", got, tt.want)
+			}
+		})
 	}
 }

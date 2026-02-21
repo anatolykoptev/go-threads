@@ -6,11 +6,12 @@ import "fmt"
 type errorClass int
 
 const (
-	errNone        errorClass = iota
-	errRateLimited            // 429
-	errForbidden              // 403 (IP ban or stale LSD)
-	errNotFound               // 404
-	errServerError            // 5xx
+	errNone          errorClass = iota
+	errRateLimited              // 429
+	errForbidden                // 403 (IP ban or stale LSD)
+	errNotFound                 // 404
+	errServerError              // 5xx
+	errLoginRedirect            // 200 but body contains login redirect
 )
 
 // classifyHTTPStatus maps an HTTP status code to an error class.
@@ -54,6 +55,14 @@ func IsRateLimited(err error) bool {
 func IsForbidden(err error) bool {
 	if ae, ok := err.(*APIError); ok {
 		return ae.Class == errForbidden
+	}
+	return false
+}
+
+// IsLoginRedirect returns true if the response was a login redirect.
+func IsLoginRedirect(err error) bool {
+	if ae, ok := err.(*APIError); ok {
+		return ae.Class == errLoginRedirect
 	}
 	return false
 }

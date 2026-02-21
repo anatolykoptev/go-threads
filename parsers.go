@@ -9,18 +9,24 @@ import (
 
 // --- Raw response types for JSON unmarshalling ---
 
+type rawBioLink struct {
+	URL   string `json:"url"`
+	Title string `json:"title"`
+}
+
 type rawUser struct {
-	Pk                    json.Number `json:"pk"`
-	Username              string      `json:"username"`
-	FullName              string      `json:"full_name"`
-	Biography             string      `json:"biography"`
-	ProfilePicURL         string      `json:"profile_pic_url"`
-	IsVerified            bool        `json:"is_verified"`
-	IsPrivate             bool        `json:"text_post_app_is_private"`
-	FollowerCount         int         `json:"follower_count"`
-	FollowingCount        int         `json:"following_count"`
-	ThreadCount           int         `json:"text_post_app_threads_count,omitempty"`
-	HdProfilePicVersions  []rawImageVersion `json:"hd_profile_pic_versions,omitempty"`
+	Pk                   json.Number       `json:"pk"`
+	Username             string            `json:"username"`
+	FullName             string            `json:"full_name"`
+	Biography            string            `json:"biography"`
+	BioLinks             []rawBioLink      `json:"bio_links"`
+	ProfilePicURL        string            `json:"profile_pic_url"`
+	IsVerified           bool              `json:"is_verified"`
+	IsPrivate            bool              `json:"text_post_app_is_private"`
+	FollowerCount        int               `json:"follower_count"`
+	FollowingCount       int               `json:"following_count"`
+	ThreadCount          int               `json:"text_post_app_threads_count,omitempty"`
+	HdProfilePicVersions []rawImageVersion `json:"hd_profile_pic_versions,omitempty"`
 }
 
 type rawImageVersion struct {
@@ -296,11 +302,16 @@ func convertUser(ru rawUser) *ThreadsUser {
 	if picURL == "" && len(ru.HdProfilePicVersions) > 0 {
 		picURL = ru.HdProfilePicVersions[0].URL
 	}
+	var bioLinks []BioLink
+	for _, bl := range ru.BioLinks {
+		bioLinks = append(bioLinks, BioLink{URL: bl.URL, Title: bl.Title})
+	}
 	return &ThreadsUser{
 		ID:             ru.Pk.String(),
 		Username:       ru.Username,
 		FullName:       ru.FullName,
 		Bio:            ru.Biography,
+		BioLinks:       bioLinks,
 		ProfilePicURL:  picURL,
 		IsVerified:     ru.IsVerified,
 		IsPrivate:      ru.IsPrivate,
@@ -354,4 +365,99 @@ func convertPost(rp rawPost) Post {
 	}
 
 	return p
+}
+
+// --- GraphQL parsers ---
+
+// parseSearchUsers parses a SearchUsers GraphQL response.
+// Supports both legacy (searchResults.users) and current (xdt_api__v1__users__search_connection.edges) formats.
+func parseSearchUsers(body []byte) ([]*ThreadsUser, error) {
+	// Try current format first: data.xdt_api__v1__users__search_connection.edges
+	var current struct {
+		Data struct {
+			SearchConnection struct {
+				Edges []struct {
+					Node struct {
+						User rawUser `json:"text_post_app_user"`
+					} `json:"node"`
+				} `json:"edges"`
+			} `json:"xdt_api__v1__users__search_connection"`
+		} `json:"data"`
+	}
+	if json.Unmarshal(body, &current) == nil && len(current.Data.SearchConnection.Edges) > 0 {
+		var users []*ThreadsUser
+		for _, edge := range current.Data.SearchConnection.Edges {
+			users = append(users, convertUser(edge.Node.User))
+		}
+		return users, nil
+	}
+
+	// Fallback: legacy format data.searchResults.users
+	var legacy struct {
+		Data struct {
+			SearchResults struct {
+				Users []struct {
+					User rawUser `json:"user"`
+				} `json:"users"`
+			} `json:"searchResults"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &legacy); err != nil {
+		return nil, fmt.Errorf("unmarshal search users: %w", err)
+	}
+	var users []*ThreadsUser
+	for _, su := range legacy.Data.SearchResults.Users {
+		users = append(users, convertUser(su.User))
+	}
+	return users, nil
+}
+
+// --- Private API parsers ---
+
+// parsePrivateUserList parses a followers/following private API response.
+func parsePrivateUserList(body []byte) ([]*ThreadsUser, string, error) {
+	var raw struct {
+		Users     []rawUser `json:"users"`
+		NextMaxID string    `json:"next_max_id"`
+	}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return nil, "", fmt.Errorf("unmarshal private user list: %w", err)
+	}
+	var users []*ThreadsUser
+	for _, ru := range raw.Users {
+		users = append(users, convertUser(ru))
+	}
+	return users, raw.NextMaxID, nil
+}
+
+// parsePrivateThread parses a private API thread (text_feed) response.
+func parsePrivateThread(body []byte) (*Thread, []*Thread, error) {
+	var raw struct {
+		ContainingThread struct {
+			ThreadItems []rawThreadItem `json:"thread_items"`
+		} `json:"containing_thread"`
+		ReplyThreads []struct {
+			ThreadItems []rawThreadItem `json:"thread_items"`
+		} `json:"reply_threads"`
+	}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return nil, nil, fmt.Errorf("unmarshal private thread: %w", err)
+	}
+
+	main := &Thread{}
+	for _, item := range raw.ContainingThread.ThreadItems {
+		main.Items = append(main.Items, convertPost(item.Post))
+	}
+
+	var replies []*Thread
+	for _, rt := range raw.ReplyThreads {
+		t := &Thread{}
+		for _, item := range rt.ThreadItems {
+			t.Items = append(t.Items, convertPost(item.Post))
+		}
+		if len(t.Items) > 0 {
+			replies = append(replies, t)
+		}
+	}
+	return main, replies, nil
 }

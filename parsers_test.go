@@ -9,7 +9,7 @@ func TestParseUserFromSSR(t *testing.T) {
 	// Simulates the __bbox SSR block found in real page HTML
 	html := []byte(`
 		<html><script>some stuff</script>
-		<script>"result":{"data":{"user":{"pk":"63404918397","text_post_app_is_private":false,"has_onboarded_to_text_post_app":true,"profile_pic_url":"https://example.com/pic.jpg","username":"instagram","follower_count":35930885,"hd_profile_pic_versions":[{"height":320,"url":"https://example.com/hd.jpg","width":320}],"is_verified":true,"biography":"Discover what's new","full_name":"Instagram","bio_links":[],"following_count":500,"text_post_app_threads_count":1234}},"sequence_number":0}</script>
+		<script>"result":{"data":{"user":{"pk":"63404918397","text_post_app_is_private":false,"has_onboarded_to_text_post_app":true,"profile_pic_url":"https://example.com/pic.jpg","username":"instagram","follower_count":35930885,"hd_profile_pic_versions":[{"height":320,"url":"https://example.com/hd.jpg","width":320}],"is_verified":true,"biography":"Discover what's new","full_name":"Instagram","bio_links":[{"url":"https://instagram.com","title":"Instagram"}],"following_count":500,"text_post_app_threads_count":1234}},"sequence_number":0}</script>
 	`)
 
 	user, err := parseUserFromSSR(html)
@@ -42,6 +42,15 @@ func TestParseUserFromSSR(t *testing.T) {
 	}
 	if user.Bio != "Discover what's new" {
 		t.Errorf("Bio = %q", user.Bio)
+	}
+	if len(user.BioLinks) != 1 {
+		t.Fatalf("len(BioLinks) = %d, want 1", len(user.BioLinks))
+	}
+	if user.BioLinks[0].URL != "https://instagram.com" {
+		t.Errorf("BioLinks[0].URL = %q", user.BioLinks[0].URL)
+	}
+	if user.BioLinks[0].Title != "Instagram" {
+		t.Errorf("BioLinks[0].Title = %q", user.BioLinks[0].Title)
 	}
 }
 
@@ -230,5 +239,127 @@ func TestParseCarouselMedia(t *testing.T) {
 	}
 	if len(post.Videos) != 1 {
 		t.Errorf("len(Videos) = %d, want 1", len(post.Videos))
+	}
+}
+
+func TestParseSearchUsers(t *testing.T) {
+	// Test current format (xdt_api__v1__users__search_connection)
+	body := []byte(`{
+		"data": {
+			"xdt_api__v1__users__search_connection": {
+				"edges": [
+					{"node": {"text_post_app_user": {"pk": "100", "username": "alice", "full_name": "Alice A", "is_verified": false, "follower_count": 100}}},
+					{"node": {"text_post_app_user": {"pk": "200", "username": "bob", "full_name": "Bob B", "is_verified": true, "follower_count": 5000}}}
+				]
+			}
+		}
+	}`)
+
+	users, err := parseSearchUsers(body)
+	if err != nil {
+		t.Fatalf("parseSearchUsers: %v", err)
+	}
+	if len(users) != 2 {
+		t.Fatalf("len(users) = %d, want 2", len(users))
+	}
+	if users[0].Username != "alice" {
+		t.Errorf("users[0].Username = %q", users[0].Username)
+	}
+	if !users[1].IsVerified {
+		t.Error("users[1].IsVerified = false, want true")
+	}
+}
+
+func TestParseSearchUsersLegacy(t *testing.T) {
+	// Test legacy format (searchResults.users)
+	body := []byte(`{
+		"data": {
+			"searchResults": {
+				"users": [
+					{"user": {"pk": "300", "username": "charlie", "full_name": "Charlie C", "is_verified": true, "follower_count": 999}}
+				]
+			}
+		}
+	}`)
+
+	users, err := parseSearchUsers(body)
+	if err != nil {
+		t.Fatalf("parseSearchUsers (legacy): %v", err)
+	}
+	if len(users) != 1 {
+		t.Fatalf("len(users) = %d, want 1", len(users))
+	}
+	if users[0].Username != "charlie" {
+		t.Errorf("users[0].Username = %q", users[0].Username)
+	}
+}
+
+func TestParsePrivateUserList(t *testing.T) {
+	body := []byte(`{
+		"users": [
+			{"pk": "111", "username": "follower1", "full_name": "Follower One", "is_verified": false, "follower_count": 50},
+			{"pk": "222", "username": "follower2", "full_name": "Follower Two", "is_verified": true, "follower_count": 1000}
+		],
+		"next_max_id": "cursor_abc123"
+	}`)
+
+	users, nextMaxID, err := parsePrivateUserList(body)
+	if err != nil {
+		t.Fatalf("parsePrivateUserList: %v", err)
+	}
+	if len(users) != 2 {
+		t.Fatalf("len(users) = %d, want 2", len(users))
+	}
+	if users[0].Username != "follower1" {
+		t.Errorf("users[0].Username = %q", users[0].Username)
+	}
+	if nextMaxID != "cursor_abc123" {
+		t.Errorf("nextMaxID = %q, want %q", nextMaxID, "cursor_abc123")
+	}
+}
+
+func TestParsePrivateThread(t *testing.T) {
+	body := []byte(`{
+		"containing_thread": {
+			"thread_items": [
+				{"post": {"pk": "999", "code": "MainPost", "user": {"pk": "1", "username": "author"}, "caption": {"text": "Main post"}, "taken_at": 1700000000, "like_count": 100, "media_type": 1, "text_post_app_info": {"is_reply": false, "direct_reply_count": 2}}}
+			]
+		},
+		"reply_threads": [
+			{"thread_items": [
+				{"post": {"pk": "1001", "code": "Reply1", "user": {"pk": "2", "username": "replier"}, "caption": {"text": "Nice post!"}, "taken_at": 1700001000, "like_count": 5, "media_type": 1, "text_post_app_info": {"is_reply": true, "direct_reply_count": 0}}}
+			]}
+		]
+	}`)
+
+	main, replies, err := parsePrivateThread(body)
+	if err != nil {
+		t.Fatalf("parsePrivateThread: %v", err)
+	}
+	if len(main.Items) != 1 {
+		t.Fatalf("len(main.Items) = %d, want 1", len(main.Items))
+	}
+	if main.Items[0].Text != "Main post" {
+		t.Errorf("main text = %q", main.Items[0].Text)
+	}
+	if len(replies) != 1 {
+		t.Fatalf("len(replies) = %d, want 1", len(replies))
+	}
+	if replies[0].Items[0].Text != "Nice post!" {
+		t.Errorf("reply text = %q", replies[0].Items[0].Text)
+	}
+}
+
+func TestParseBioLinksEmpty(t *testing.T) {
+	html := []byte(`
+		<html><script>"result":{"data":{"user":{"pk":"123","username":"nolinks","full_name":"No Links","biography":"Hello","bio_links":[],"profile_pic_url":"https://example.com/pic.jpg","is_verified":false,"text_post_app_is_private":false,"follower_count":10,"following_count":5}},"sequence_number":0}</script>
+	`)
+
+	user, err := parseUserFromSSR(html)
+	if err != nil {
+		t.Fatalf("parseUserFromSSR: %v", err)
+	}
+	if len(user.BioLinks) != 0 {
+		t.Errorf("len(BioLinks) = %d, want 0", len(user.BioLinks))
 	}
 }

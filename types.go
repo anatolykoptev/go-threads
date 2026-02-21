@@ -2,12 +2,19 @@ package threads
 
 import "time"
 
+// BioLink represents a link in a user's bio.
+type BioLink struct {
+	URL   string
+	Title string
+}
+
 // ThreadsUser represents a Threads user profile.
 type ThreadsUser struct {
 	ID             string
 	Username       string
 	FullName       string
 	Bio            string
+	BioLinks       []BioLink
 	ProfilePicURL  string
 	IsVerified     bool
 	IsPrivate      bool
