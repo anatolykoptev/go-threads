@@ -101,8 +101,9 @@ func TestParseThreadsFromSSR(t *testing.T) {
 }
 
 func TestParseThreadFromSSR(t *testing.T) {
+	// Thread detail pages use data.data.edges[] — edge 0 = main post, edges 1+ = replies
 	html := []byte(`<html>
-		<script>"result":{"data":{"containing_thread":{"thread_items":[{"post":{"pk":"999888777","code":"MainThread1","user":{"pk":"12345","username":"zuck","full_name":"Mark Zuckerberg","is_verified":true},"caption":{"text":"Original post"},"taken_at":1700000000,"like_count":1000,"media_type":1,"text_post_app_info":{"is_reply":false,"direct_reply_count":50}}}]},"reply_threads":[{"thread_items":[{"post":{"pk":"111000111","code":"Reply1Code","user":{"pk":"67890","username":"replier","full_name":"Replier User","is_verified":false},"caption":{"text":"Great post!"},"taken_at":1700001000,"like_count":5,"media_type":1,"text_post_app_info":{"is_reply":true,"direct_reply_count":0}}}]}]},"sequence_number":0}</script>
+		<script>"result":{"data":{"data":{"edges":[{"node":{"thread_items":[{"post":{"pk":"999888777","code":"MainThread1","user":{"pk":"12345","username":"zuck","full_name":"Mark Zuckerberg","is_verified":true},"caption":{"text":"Original post"},"taken_at":1700000000,"like_count":1000,"media_type":1,"text_post_app_info":{"is_reply":false,"direct_reply_count":50}}}]}},{"node":{"thread_items":[{"post":{"pk":"111000111","code":"Reply1Code","user":{"pk":"67890","username":"replier","full_name":"Replier User","is_verified":false},"caption":{"text":"Great post!"},"taken_at":1700001000,"like_count":5,"media_type":1,"text_post_app_info":{"is_reply":true,"direct_reply_count":0}}}]}}]}},"sequence_number":0}</script>
 	`)
 
 	main, replies, err := parseThreadFromSSR(html)

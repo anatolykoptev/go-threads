@@ -82,29 +82,38 @@ func (c *Client) GetThread(ctx context.Context, username, postCode string) (*Thr
 }
 
 // parseThreadFromSSR extracts a single thread + replies from SSR HTML.
+// The SSR structure is: data.data.edges[].node.thread_items[]
+// Edge 0 = main post, Edges 1+ = replies.
 func parseThreadFromSSR(html []byte) (*Thread, []*Thread, error) {
 	for _, block := range extractSSRBlocks(html) {
 		var probe struct {
-			ContainingThread *struct {
-				ThreadItems []rawThreadItem `json:"thread_items"`
-			} `json:"containing_thread"`
-			ReplyThreads []struct {
-				ThreadItems []rawThreadItem `json:"thread_items"`
-			} `json:"reply_threads"`
+			Data *struct {
+				Edges []struct {
+					Node struct {
+						ThreadItems []rawThreadItem `json:"thread_items"`
+					} `json:"node"`
+				} `json:"edges"`
+			} `json:"data"`
 		}
-		if json.Unmarshal(block, &probe) != nil || probe.ContainingThread == nil {
+		if json.Unmarshal(block, &probe) != nil || probe.Data == nil || len(probe.Data.Edges) == 0 {
+			continue
+		}
+		// Verify this is a thread page (has thread_items, not mediaData)
+		if len(probe.Data.Edges[0].Node.ThreadItems) == 0 {
 			continue
 		}
 
+		// Edge 0 = main thread
 		main := &Thread{}
-		for _, item := range probe.ContainingThread.ThreadItems {
+		for _, item := range probe.Data.Edges[0].Node.ThreadItems {
 			main.Items = append(main.Items, convertPost(item.Post))
 		}
 
+		// Edges 1+ = replies
 		var replies []*Thread
-		for _, rt := range probe.ReplyThreads {
+		for _, edge := range probe.Data.Edges[1:] {
 			t := &Thread{}
-			for _, item := range rt.ThreadItems {
+			for _, item := range edge.Node.ThreadItems {
 				t.Items = append(t.Items, convertPost(item.Post))
 			}
 			if len(t.Items) > 0 {
