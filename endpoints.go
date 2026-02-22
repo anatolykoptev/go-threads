@@ -1,14 +1,13 @@
 package threads
 
 const (
-	threadsBaseURL    = "https://www.threads.net"
-	threadsGQLBaseURL = "https://www.threads.com"
-	igBaseURL         = "https://i.instagram.com"
-	igAppID           = "238260118697367"
+	threadsBaseURL = "https://www.threads.net"
+	igBaseURL      = "https://i.instagram.com"
+	igWebBaseURL   = "https://www.instagram.com"
+	igAppID        = "238260118697367"
 
 	// GraphQL doc IDs
 	docIDGetThreadLikers = "9360915773983802"
-	docIDSearchUsers     = "9509001572511267"
 
 	// Private API paths
 	pathPublishText = "/api/v1/media/configure_text_only_post/"
@@ -40,23 +39,27 @@ var threadsHeaderOrder = []string{
 	"sec-fetch-mode",
 	"sec-fetch-site",
 	"user-agent",
+	"x-asbd-id",
 	"x-csrftoken",
+	"x-fb-friendly-name",
 	"x-fb-lsd",
 	"x-ig-app-id",
 }
 
 // requestHeaders returns the standard headers for a Threads GraphQL POST.
-func requestHeaders(lsd string) map[string]string {
+func requestHeaders(lsd, friendlyName string) map[string]string {
 	return map[string]string{
-		"accept":          "*/*",
-		"accept-language": "en-US,en;q=0.9",
-		"content-type":    "application/x-www-form-urlencoded",
-		"origin":          threadsGQLBaseURL,
-		"referer":         threadsGQLBaseURL + "/",
-		"sec-fetch-dest":  "empty",
-		"sec-fetch-mode":  "cors",
-		"sec-fetch-site":  "same-origin",
-		"x-fb-lsd":        lsd,
-		"x-ig-app-id":     igAppID,
+		"accept":             "*/*",
+		"accept-language":    "en-US,en;q=0.9",
+		"content-type":      "application/x-www-form-urlencoded",
+		"origin":            threadsBaseURL,
+		"referer":           threadsBaseURL + "/",
+		"sec-fetch-dest":    "empty",
+		"sec-fetch-mode":    "cors",
+		"sec-fetch-site":    "same-origin",
+		"x-asbd-id":         "129477",
+		"x-fb-friendly-name": friendlyName,
+		"x-fb-lsd":          lsd,
+		"x-ig-app-id":       igAppID,
 	}
 }

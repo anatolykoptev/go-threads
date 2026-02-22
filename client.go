@@ -25,10 +25,11 @@ type Client struct {
 	cfg Config
 
 	// LSD token state
-	lsd   string
-	csrf  string
-	lsdMu sync.Mutex
-	lsdAt time.Time
+	lsd    string
+	csrf   string
+	fbDtsg string // Facebook DTSG token (empty without login, populated with session cookies)
+	lsdMu  sync.Mutex
+	lsdAt  time.Time
 
 	// Auth state (Private API)
 	token  string // "IGT:2:<token>"
@@ -65,6 +66,12 @@ func NewClient(cfg Config) (*Client, error) {
 		},
 		ratelimit.DomainConfig{
 			Domain:            "i.instagram.com",
+			RequestsPerWindow: 20,
+			WindowDuration:    15 * time.Minute,
+			MinDelay:          3 * time.Second,
+		},
+		ratelimit.DomainConfig{
+			Domain:            "www.instagram.com",
 			RequestsPerWindow: 20,
 			WindowDuration:    15 * time.Minute,
 			MinDelay:          3 * time.Second,
@@ -192,7 +199,7 @@ func (c *Client) resolveUsername(ctx context.Context, username string) (string, 
 }
 
 // doGraphQL sends a GraphQL POST to the Threads API.
-func (c *Client) doGraphQL(ctx context.Context, endpoint, docID string, variables map[string]any) ([]byte, error) {
+func (c *Client) doGraphQL(ctx context.Context, endpoint, docID, friendlyName string, variables map[string]any) ([]byte, error) {
 	lsd, err := c.ensureLSD(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("%s: LSD: %w", endpoint, err)
@@ -207,9 +214,15 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID string, variable
 	form.Set("lsd", lsd)
 	form.Set("doc_id", docID)
 	form.Set("variables", string(varsJSON))
+	if c.fbDtsg != "" {
+		form.Set("fb_dtsg", c.fbDtsg)
+		form.Set("jazoest", computeJazoest(c.fbDtsg))
+	}
+	form.Set("__a", "1")
+	form.Set("__comet_req", "29")
 	bodyStr := form.Encode()
 
-	headers := requestHeaders(lsd)
+	headers := requestHeaders(lsd, friendlyName)
 	if cookies := c.buildCookieHeader(); cookies != "" {
 		headers["cookie"] = cookies
 		if c.csrf != "" {
@@ -229,7 +242,7 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID string, variable
 
 		respBody, _, status, doErr := c.bc.DoWithHeaderOrder(
 			"POST",
-			threadsGQLBaseURL+"/api/graphql",
+			threadsBaseURL+"/api/graphql",
 			headers,
 			strings.NewReader(bodyStr),
 			threadsHeaderOrder,
@@ -252,11 +265,15 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID string, variable
 			c.recordMetrics(endpoint, false)
 			lastErr = &APIError{Status: status, Class: errClass, Message: "forbidden (stale LSD?)"}
 
-			// Re-fetch LSD for retry
+			// Re-fetch LSD for retry (also refreshes fbDtsg)
 			newLSD, lsdErr := c.ensureLSD(ctx)
 			if lsdErr == nil {
-				headers = requestHeaders(newLSD)
+				headers = requestHeaders(newLSD, friendlyName)
 				form.Set("lsd", newLSD)
+				if c.fbDtsg != "" {
+					form.Set("fb_dtsg", c.fbDtsg)
+					form.Set("jazoest", computeJazoest(c.fbDtsg))
+				}
 				bodyStr = form.Encode()
 			}
 			continue

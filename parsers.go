@@ -367,51 +367,6 @@ func convertPost(rp rawPost) Post {
 	return p
 }
 
-// --- GraphQL parsers ---
-
-// parseSearchUsers parses a SearchUsers GraphQL response.
-// Supports both legacy (searchResults.users) and current (xdt_api__v1__users__search_connection.edges) formats.
-func parseSearchUsers(body []byte) ([]*ThreadsUser, error) {
-	// Try current format first: data.xdt_api__v1__users__search_connection.edges
-	var current struct {
-		Data struct {
-			SearchConnection struct {
-				Edges []struct {
-					Node struct {
-						User rawUser `json:"text_post_app_user"`
-					} `json:"node"`
-				} `json:"edges"`
-			} `json:"xdt_api__v1__users__search_connection"`
-		} `json:"data"`
-	}
-	if json.Unmarshal(body, &current) == nil && len(current.Data.SearchConnection.Edges) > 0 {
-		var users []*ThreadsUser
-		for _, edge := range current.Data.SearchConnection.Edges {
-			users = append(users, convertUser(edge.Node.User))
-		}
-		return users, nil
-	}
-
-	// Fallback: legacy format data.searchResults.users
-	var legacy struct {
-		Data struct {
-			SearchResults struct {
-				Users []struct {
-					User rawUser `json:"user"`
-				} `json:"users"`
-			} `json:"searchResults"`
-		} `json:"data"`
-	}
-	if err := json.Unmarshal(body, &legacy); err != nil {
-		return nil, fmt.Errorf("unmarshal search users: %w", err)
-	}
-	var users []*ThreadsUser
-	for _, su := range legacy.Data.SearchResults.Users {
-		users = append(users, convertUser(su.User))
-	}
-	return users, nil
-}
-
 // --- Private API parsers ---
 
 // parsePrivateUserList parses a followers/following private API response.

@@ -242,58 +242,6 @@ func TestParseCarouselMedia(t *testing.T) {
 	}
 }
 
-func TestParseSearchUsers(t *testing.T) {
-	// Test current format (xdt_api__v1__users__search_connection)
-	body := []byte(`{
-		"data": {
-			"xdt_api__v1__users__search_connection": {
-				"edges": [
-					{"node": {"text_post_app_user": {"pk": "100", "username": "alice", "full_name": "Alice A", "is_verified": false, "follower_count": 100}}},
-					{"node": {"text_post_app_user": {"pk": "200", "username": "bob", "full_name": "Bob B", "is_verified": true, "follower_count": 5000}}}
-				]
-			}
-		}
-	}`)
-
-	users, err := parseSearchUsers(body)
-	if err != nil {
-		t.Fatalf("parseSearchUsers: %v", err)
-	}
-	if len(users) != 2 {
-		t.Fatalf("len(users) = %d, want 2", len(users))
-	}
-	if users[0].Username != "alice" {
-		t.Errorf("users[0].Username = %q", users[0].Username)
-	}
-	if !users[1].IsVerified {
-		t.Error("users[1].IsVerified = false, want true")
-	}
-}
-
-func TestParseSearchUsersLegacy(t *testing.T) {
-	// Test legacy format (searchResults.users)
-	body := []byte(`{
-		"data": {
-			"searchResults": {
-				"users": [
-					{"user": {"pk": "300", "username": "charlie", "full_name": "Charlie C", "is_verified": true, "follower_count": 999}}
-				]
-			}
-		}
-	}`)
-
-	users, err := parseSearchUsers(body)
-	if err != nil {
-		t.Fatalf("parseSearchUsers (legacy): %v", err)
-	}
-	if len(users) != 1 {
-		t.Fatalf("len(users) = %d, want 1", len(users))
-	}
-	if users[0].Username != "charlie" {
-		t.Errorf("users[0].Username = %q", users[0].Username)
-	}
-}
-
 func TestParsePrivateUserList(t *testing.T) {
 	body := []byte(`{
 		"users": [
