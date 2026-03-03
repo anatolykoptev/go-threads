@@ -1,8 +1,8 @@
 module github.com/anatolykoptev/go-threads
 
-go 1.24.1
+go 1.26
 
-require github.com/anatolykoptev/go-stealth v1.0.0
+require github.com/anatolykoptev/go-stealth v1.3.1
 
 require (
 	github.com/andybalholm/brotli v1.2.0 // indirect
