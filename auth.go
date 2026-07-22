@@ -138,14 +138,14 @@ func encryptPassword(password string, keys *encryptionKeys) (string, error) {
 	// [1B version=1] [1B keyID] [12B IV] [2B RSA key length (LE)] [NB encrypted AES key] [16B GCM tag] [NB ciphertext]
 	rsaKeyLen := len(encryptedAESKey)
 	envelope := make([]byte, 0, 1+1+12+2+rsaKeyLen+tagSize+len(encryptedPassword))
-	envelope = append(envelope, 1)             // version
+	envelope = append(envelope, 1)                // version
 	envelope = append(envelope, byte(keys.KeyID)) // key ID
-	envelope = append(envelope, iv...)         // 12B IV
+	envelope = append(envelope, iv...)            // 12B IV
 	rsaLenBytes := make([]byte, 2)
 	binary.LittleEndian.PutUint16(rsaLenBytes, uint16(rsaKeyLen))
-	envelope = append(envelope, rsaLenBytes...)     // 2B RSA key length
-	envelope = append(envelope, encryptedAESKey...) // encrypted AES key
-	envelope = append(envelope, gcmTag...)          // 16B GCM tag
+	envelope = append(envelope, rsaLenBytes...)       // 2B RSA key length
+	envelope = append(envelope, encryptedAESKey...)   // encrypted AES key
+	envelope = append(envelope, gcmTag...)            // 16B GCM tag
 	envelope = append(envelope, encryptedPassword...) // ciphertext
 
 	encoded := base64.StdEncoding.EncodeToString(envelope)

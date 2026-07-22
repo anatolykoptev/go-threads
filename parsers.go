@@ -15,17 +15,25 @@ type rawBioLink struct {
 }
 
 type rawUser struct {
-	Pk                   json.Number       `json:"pk"`
-	Username             string            `json:"username"`
-	FullName             string            `json:"full_name"`
-	Biography            string            `json:"biography"`
-	BioLinks             []rawBioLink      `json:"bio_links"`
-	ProfilePicURL        string            `json:"profile_pic_url"`
-	IsVerified           bool              `json:"is_verified"`
-	IsPrivate            bool              `json:"text_post_app_is_private"`
-	FollowerCount        int               `json:"follower_count"`
-	FollowingCount       int               `json:"following_count"`
-	ThreadCount          int               `json:"text_post_app_threads_count,omitempty"`
+	ID             string       `json:"id"`
+	Pk             json.Number  `json:"pk"`
+	Username       string       `json:"username"`
+	FullName       string       `json:"full_name"`
+	Biography      string       `json:"biography"`
+	BioLinks       []rawBioLink `json:"bio_links"`
+	ProfilePicURL  string       `json:"profile_pic_url"`
+	IsVerified     bool         `json:"is_verified"`
+	IsPrivate      bool         `json:"text_post_app_is_private"`
+	IsPrivateIG    bool         `json:"is_private"`
+	FollowerCount  int          `json:"follower_count"`
+	FollowingCount int          `json:"following_count"`
+	ThreadCount    int          `json:"text_post_app_threads_count,omitempty"`
+	FollowedBy     *struct {
+		Count int `json:"count"`
+	} `json:"edge_followed_by,omitempty"`
+	Following *struct {
+		Count int `json:"count"`
+	} `json:"edge_follow,omitempty"`
 	HdProfilePicVersions []rawImageVersion `json:"hd_profile_pic_versions,omitempty"`
 }
 
@@ -43,17 +51,17 @@ type rawVideoVersion struct {
 }
 
 type rawPost struct {
-	Pk        json.Number `json:"pk"`
-	Code      string      `json:"code"`
-	User      rawUser     `json:"user"`
-	Caption   *struct {
+	Pk      json.Number `json:"pk"`
+	Code    string      `json:"code"`
+	User    rawUser     `json:"user"`
+	Caption *struct {
 		Text string `json:"text"`
 	} `json:"caption"`
-	TakenAt         json.Number      `json:"taken_at"`
-	LikeCount       int              `json:"like_count"`
-	TextPostAppInfo *rawTextPostInfo `json:"text_post_app_info"`
-	MediaType       int              `json:"media_type"`
-	ImageVersions2  *rawImageSet     `json:"image_versions2"`
+	TakenAt         json.Number       `json:"taken_at"`
+	LikeCount       int               `json:"like_count"`
+	TextPostAppInfo *rawTextPostInfo  `json:"text_post_app_info"`
+	MediaType       int               `json:"media_type"`
+	ImageVersions2  *rawImageSet      `json:"image_versions2"`
 	VideoVersions   []rawVideoVersion `json:"video_versions"`
 	CarouselMedia   []rawCarouselItem `json:"carousel_media"`
 }
@@ -68,8 +76,8 @@ type rawImageSet struct {
 }
 
 type rawCarouselItem struct {
-	MediaType      int              `json:"media_type"`
-	ImageVersions2 *rawImageSet     `json:"image_versions2"`
+	MediaType      int               `json:"media_type"`
+	ImageVersions2 *rawImageSet      `json:"image_versions2"`
 	VideoVersions  []rawVideoVersion `json:"video_versions"`
 }
 
@@ -83,7 +91,9 @@ const ssrDataPrefix = `"result":{"data":`
 
 // extractSSRBlocks finds all SSR data blocks in the HTML.
 // Threads embeds preloaded query results as:
-//   "result":{"data":{...}},"sequence_number":N
+//
+//	"result":{"data":{...}},"sequence_number":N
+//
 // We find each "result":{"data": prefix and extract the nested JSON object
 // using brace-depth counting (regex won't work for nested JSON).
 func extractSSRBlocks(html []byte) [][]byte {
@@ -199,16 +209,22 @@ func parseThreadsFromSSR(html []byte) ([]*Thread, error) {
 func parseUser(body []byte) (*ThreadsUser, error) {
 	var raw struct {
 		Data struct {
-			User *rawUser `json:"user"`
+			User     *rawUser `json:"user"`
+			UserData *struct {
+				User rawUser `json:"user"`
+			} `json:"userData"`
 		} `json:"data"`
 	}
 	if err := json.Unmarshal(body, &raw); err != nil {
 		return nil, fmt.Errorf("unmarshal user: %w", err)
 	}
-	if raw.Data.User == nil {
-		return nil, fmt.Errorf("user data is null")
+	if raw.Data.User != nil {
+		return convertUser(*raw.Data.User), nil
 	}
-	return convertUser(*raw.Data.User), nil
+	if raw.Data.UserData != nil {
+		return convertUser(raw.Data.UserData.User), nil
+	}
+	return nil, fmt.Errorf("user data is null")
 }
 
 // parseUserThreads parses a GetUserThreads GraphQL response.
@@ -295,6 +311,94 @@ func parseLikers(body []byte) ([]*ThreadsUser, error) {
 	return users, nil
 }
 
+// parseSearchUsers parses a SearchUsers GraphQL response.
+// Supports current (searchResults.edges[].node), legacy
+// (xdt_api__v1__users__search_connection.edges[].node.text_post_app_user),
+// and older (searchResults.users[]) formats.
+func parseSearchUsers(body []byte) ([]*ThreadsUser, error) {
+	var current struct {
+		Data struct {
+			SearchResults struct {
+				Edges []struct {
+					Node rawUser `json:"node"`
+				} `json:"edges"`
+			} `json:"searchResults"`
+		} `json:"data"`
+	}
+	if json.Unmarshal(body, &current) == nil && len(current.Data.SearchResults.Edges) > 0 {
+		var users []*ThreadsUser
+		for _, edge := range current.Data.SearchResults.Edges {
+			if (edge.Node.Pk.String() == "" && edge.Node.ID == "") || edge.Node.Username == "" {
+				continue
+			}
+			users = append(users, convertUser(edge.Node))
+		}
+		if len(users) > 0 {
+			return users, nil
+		}
+	}
+
+	var xdt struct {
+		Data struct {
+			SearchConnection struct {
+				Edges []struct {
+					Node struct {
+						User rawUser `json:"text_post_app_user"`
+					} `json:"node"`
+				} `json:"edges"`
+			} `json:"xdt_api__v1__users__search_connection"`
+		} `json:"data"`
+	}
+	if json.Unmarshal(body, &xdt) == nil && len(xdt.Data.SearchConnection.Edges) > 0 {
+		var users []*ThreadsUser
+		for _, edge := range xdt.Data.SearchConnection.Edges {
+			if edge.Node.User.Pk.String() == "" || edge.Node.User.Username == "" {
+				continue
+			}
+			users = append(users, convertUser(edge.Node.User))
+		}
+		if len(users) > 0 {
+			return users, nil
+		}
+	}
+
+	var legacy struct {
+		Data struct {
+			SearchResults struct {
+				Users []struct {
+					User rawUser `json:"user"`
+				} `json:"users"`
+			} `json:"searchResults"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(body, &legacy); err != nil {
+		return nil, fmt.Errorf("unmarshal search users: %w", err)
+	}
+	var users []*ThreadsUser
+	for _, su := range legacy.Data.SearchResults.Users {
+		if su.User.Pk.String() == "" || su.User.Username == "" {
+			continue
+		}
+		users = append(users, convertUser(su.User))
+	}
+	return users, nil
+}
+
+// parseInstagramPost parses the /p/<shortcode>/?__a=1&__d=dis JSON response.
+func parseInstagramPost(body []byte) (*Post, error) {
+	var raw struct {
+		Items []rawPost `json:"items"`
+	}
+	if err := json.Unmarshal(body, &raw); err != nil {
+		return nil, fmt.Errorf("unmarshal instagram post: %w", err)
+	}
+	if len(raw.Items) == 0 {
+		return nil, fmt.Errorf("instagram post: no items")
+	}
+	post := convertPost(raw.Items[0])
+	return &post, nil
+}
+
 // --- Converters ---
 
 func convertUser(ru rawUser) *ThreadsUser {
@@ -306,17 +410,30 @@ func convertUser(ru rawUser) *ThreadsUser {
 	for _, bl := range ru.BioLinks {
 		bioLinks = append(bioLinks, BioLink{URL: bl.URL, Title: bl.Title})
 	}
+	id := ru.Pk.String()
+	if id == "" {
+		id = ru.ID
+	}
+	isPrivate := ru.IsPrivate || ru.IsPrivateIG
+	followerCount := ru.FollowerCount
+	followingCount := ru.FollowingCount
+	if ru.FollowedBy != nil && followerCount == 0 {
+		followerCount = ru.FollowedBy.Count
+	}
+	if ru.Following != nil && followingCount == 0 {
+		followingCount = ru.Following.Count
+	}
 	return &ThreadsUser{
-		ID:             ru.Pk.String(),
+		ID:             id,
 		Username:       ru.Username,
 		FullName:       ru.FullName,
 		Bio:            ru.Biography,
 		BioLinks:       bioLinks,
 		ProfilePicURL:  picURL,
 		IsVerified:     ru.IsVerified,
-		IsPrivate:      ru.IsPrivate,
-		FollowerCount:  ru.FollowerCount,
-		FollowingCount: ru.FollowingCount,
+		IsPrivate:      isPrivate,
+		FollowerCount:  followerCount,
+		FollowingCount: followingCount,
 		ThreadCount:    ru.ThreadCount,
 	}
 }

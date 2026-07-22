@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -21,8 +22,9 @@ const maxRetries = 3
 
 // Client is the Threads scraping client.
 type Client struct {
-	bc  *stealth.BrowserClient
-	cfg Config
+	bc   *stealth.BrowserClient
+	wowa *wowaTransport // CDP in-page-fetch transport via go-wowa; nil = stealth fallback
+	cfg  Config
 
 	// LSD token state
 	lsd    string
@@ -89,6 +91,9 @@ func NewClient(cfg Config) (*Client, error) {
 	if cfg.CSRFToken != "" {
 		c.csrf = cfg.CSRFToken
 	}
+	if cfg.WowaURL != "" {
+		c.wowa = newWowaTransport(cfg.WowaURL, cfg.InternalSecret)
+	}
 	return c, nil
 }
 
@@ -131,7 +136,14 @@ func (c *Client) fetchPage(ctx context.Context, endpoint, pageURL string) ([]byt
 			}
 		}
 
-		body, _, status, err := c.bc.DoWithHeaderOrder("GET", pageURL, pageHeaders, nil, threadsHeaderOrder)
+		var body []byte
+		var status int
+		var err error
+		if c.wowa != nil {
+			body, status, err = c.fetchPageCDP(ctx, pageURL)
+		} else {
+			body, _, status, err = c.bc.DoWithHeaderOrder("GET", pageURL, pageHeaders, nil, threadsHeaderOrder)
+		}
 		if err != nil {
 			lastErr = err
 			continue
@@ -200,35 +212,11 @@ func (c *Client) resolveUsername(ctx context.Context, username string) (string, 
 
 // doGraphQL sends a GraphQL POST to the Threads API.
 func (c *Client) doGraphQL(ctx context.Context, endpoint, docID, friendlyName string, variables map[string]any) ([]byte, error) {
-	lsd, err := c.ensureLSD(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("%s: LSD: %w", endpoint, err)
-	}
-
 	varsJSON, err := json.Marshal(variables)
 	if err != nil {
 		return nil, fmt.Errorf("%s: marshal variables: %w", endpoint, err)
 	}
 
-	form := url.Values{}
-	form.Set("lsd", lsd)
-	form.Set("doc_id", docID)
-	form.Set("variables", string(varsJSON))
-	if c.fbDtsg != "" {
-		form.Set("fb_dtsg", c.fbDtsg)
-		form.Set("jazoest", computeJazoest(c.fbDtsg))
-	}
-	form.Set("__a", "1")
-	form.Set("__comet_req", "29")
-	bodyStr := form.Encode()
-
-	headers := requestHeaders(lsd, friendlyName)
-	if cookies := c.buildCookieHeader(); cookies != "" {
-		headers["cookie"] = cookies
-		if c.csrf != "" {
-			headers["x-csrftoken"] = c.csrf
-		}
-	}
 	var lastErr error
 	for attempt := range maxRetries {
 		if attempt > 0 {
@@ -240,13 +228,45 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID, friendlyName st
 			}
 		}
 
-		respBody, _, status, doErr := c.bc.DoWithHeaderOrder(
-			"POST",
-			threadsBaseURL+"/api/graphql",
-			headers,
-			strings.NewReader(bodyStr),
-			threadsHeaderOrder,
-		)
+		lsd, lsdErr := c.ensureLSD(ctx)
+		if lsdErr != nil {
+			lastErr = lsdErr
+			continue
+		}
+
+		form := url.Values{}
+		form.Set("lsd", lsd)
+		form.Set("doc_id", docID)
+		form.Set("variables", string(varsJSON))
+		if c.fbDtsg != "" {
+			form.Set("fb_dtsg", c.fbDtsg)
+			form.Set("jazoest", computeJazoest(c.fbDtsg))
+		}
+		form.Set("__a", "1")
+		form.Set("__comet_req", "29")
+		bodyStr := form.Encode()
+
+		var respBody []byte
+		var status int
+		var doErr error
+		if c.wowa != nil {
+			respBody, status, doErr = c.doGraphQLCDP(ctx, endpoint, bodyStr, lsd, friendlyName)
+		} else {
+			headers := requestHeaders(lsd, friendlyName)
+			if cookies := c.buildCookieHeader(); cookies != "" {
+				headers["cookie"] = cookies
+				if c.csrf != "" {
+					headers["x-csrftoken"] = c.csrf
+				}
+			}
+			respBody, _, status, doErr = c.bc.DoWithHeaderOrder(
+				"POST",
+				threadsBaseURL+"/graphql/query",
+				headers,
+				strings.NewReader(bodyStr),
+				threadsHeaderOrder,
+			)
+		}
 		if doErr != nil {
 			lastErr = doErr
 			continue
@@ -264,18 +284,6 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID, friendlyName st
 			c.lsdMu.Unlock()
 			c.recordMetrics(endpoint, false)
 			lastErr = &APIError{Status: status, Class: errClass, Message: "forbidden (stale LSD?)"}
-
-			// Re-fetch LSD for retry (also refreshes fbDtsg)
-			newLSD, lsdErr := c.ensureLSD(ctx)
-			if lsdErr == nil {
-				headers = requestHeaders(newLSD, friendlyName)
-				form.Set("lsd", newLSD)
-				if c.fbDtsg != "" {
-					form.Set("fb_dtsg", c.fbDtsg)
-					form.Set("jazoest", computeJazoest(c.fbDtsg))
-				}
-				bodyStr = form.Encode()
-			}
 			continue
 		case errRateLimited:
 			c.recordMetrics(endpoint, false)
@@ -284,6 +292,7 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID, friendlyName st
 		case errServerError:
 			c.recordMetrics(endpoint, false)
 			lastErr = &APIError{Status: status, Class: errClass, Message: "server error"}
+			slog.Warn("threads: server error", slog.String("endpoint", endpoint), slog.Int("status", status))
 			continue
 		default:
 			c.recordMetrics(endpoint, false)
@@ -299,12 +308,12 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID, friendlyName st
 // privateAPIHeaders returns headers for Instagram Private API requests.
 func privateAPIHeaders(token string) map[string]string {
 	return map[string]string{
-		"Authorization":    "Bearer " + token,
-		"User-Agent":       barcelonaUA,
-		"Content-Type":     "application/x-www-form-urlencoded",
-		"X-IG-App-ID":      igAppID,
-		"Accept":           "*/*",
-		"Accept-Language":  "en-US,en;q=0.9",
+		"Authorization":               "Bearer " + token,
+		"User-Agent":                  barcelonaUA,
+		"Content-Type":                "application/x-www-form-urlencoded",
+		"X-IG-App-ID":                 igAppID,
+		"Accept":                      "*/*",
+		"Accept-Language":             "en-US,en;q=0.9",
 		"X-Bloks-Is-Layout-RTL":       "false",
 		"X-Bloks-Version-Id":          "5f56efad68e1edec7801f630b5c122704ec5378adbee6609a448f105f34a9c73",
 		"X-IG-WWW-Claim":              "0",
@@ -323,6 +332,10 @@ func privateAPIHeaders(token string) map[string]string {
 
 // doPrivateAPI sends a POST to the Instagram Private API.
 func (c *Client) doPrivateAPI(ctx context.Context, endpoint, path string, form url.Values) ([]byte, error) {
+	if c.wowa != nil {
+		return c.doCDP(ctx, endpoint, http.MethodPost, path, form)
+	}
+
 	c.authMu.RLock()
 	token := c.token
 	c.authMu.RUnlock()
@@ -380,6 +393,10 @@ func (c *Client) doPrivateAPI(ctx context.Context, endpoint, path string, form u
 
 // doPrivateGET sends a GET to the Instagram Private API.
 func (c *Client) doPrivateGET(ctx context.Context, endpoint, path string, params url.Values) ([]byte, error) {
+	if c.wowa != nil {
+		return c.doCDP(ctx, endpoint, http.MethodGet, path, params)
+	}
+
 	c.authMu.RLock()
 	token := c.token
 	c.authMu.RUnlock()
