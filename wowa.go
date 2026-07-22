@@ -292,7 +292,7 @@ func (c *Client) doGraphQLCDP(ctx context.Context, endpoint, bodyStr, lsd, frien
 		return nil, 0, fmt.Errorf("%s: %w", endpoint, err)
 	}
 	if fr.Redirected || fr.Status == 302 || fr.Status == 0 {
-		return nil, 302, nil
+		return nil, 302, &APIError{Status: 302, Class: errLoginRedirect, Message: "redirect detected"}
 	}
 	if fr.Status == 200 && len(fr.Body) > 0 && fr.Body[0] == '<' {
 		return nil, 0, fmt.Errorf("%s: HTML response from API", endpoint)
@@ -321,7 +321,7 @@ func (c *Client) fetchPageCDP(ctx context.Context, pageURL string) ([]byte, int,
 		return nil, 0, err
 	}
 	if fr.Redirected || fr.Status == 302 || fr.Status == 0 {
-		return nil, 302, nil
+		return nil, 302, &APIError{Status: 302, Class: errLoginRedirect, Message: "redirect detected"}
 	}
 	if fr.Status != 200 {
 		return nil, fr.Status, nil

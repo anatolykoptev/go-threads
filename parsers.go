@@ -321,6 +321,9 @@ func parseSearchUsers(body []byte) ([]*ThreadsUser, error) {
 	if json.Unmarshal(body, &current) == nil && len(current.Data.SearchConnection.Edges) > 0 {
 		var users []*ThreadsUser
 		for _, edge := range current.Data.SearchConnection.Edges {
+			if edge.Node.User.Pk.String() == "" || edge.Node.User.Username == "" {
+				continue
+			}
 			users = append(users, convertUser(edge.Node.User))
 		}
 		return users, nil
@@ -340,6 +343,9 @@ func parseSearchUsers(body []byte) ([]*ThreadsUser, error) {
 	}
 	var users []*ThreadsUser
 	for _, su := range legacy.Data.SearchResults.Users {
+		if su.User.Pk.String() == "" || su.User.Username == "" {
+			continue
+		}
 		users = append(users, convertUser(su.User))
 	}
 	return users, nil

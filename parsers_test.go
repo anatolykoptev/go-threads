@@ -298,6 +298,35 @@ func TestParsePrivateThread(t *testing.T) {
 	}
 }
 
+func TestParseSearchUsersSkipsBlankUser(t *testing.T) {
+	body := []byte(`{
+		"data": {
+			"xdt_api__v1__users__search_connection": {
+				"edges": [
+					{"node": {"text_post_app_user": {"pk": "1", "username": "alice"}}},
+					{"node": {}},
+					{"node": {"text_post_app_user": null}},
+					{"node": {"text_post_app_user": {"pk": "2", "username": "bob"}}}
+				]
+			}
+		}
+	}`)
+
+	users, err := parseSearchUsers(body)
+	if err != nil {
+		t.Fatalf("parseSearchUsers: %v", err)
+	}
+	if len(users) != 2 {
+		t.Fatalf("len(users) = %d, want 2", len(users))
+	}
+	if users[0].Username != "alice" {
+		t.Errorf("users[0].Username = %q, want alice", users[0].Username)
+	}
+	if users[1].Username != "bob" {
+		t.Errorf("users[1].Username = %q, want bob", users[1].Username)
+	}
+}
+
 func TestParseBioLinksEmpty(t *testing.T) {
 	html := []byte(`
 		<html><script>"result":{"data":{"user":{"pk":"123","username":"nolinks","full_name":"No Links","biography":"Hello","bio_links":[],"profile_pic_url":"https://example.com/pic.jpg","is_verified":false,"text_post_app_is_private":false,"follower_count":10,"following_count":5}},"sequence_number":0}</script>

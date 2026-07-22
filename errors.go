@@ -1,6 +1,9 @@
 package threads
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 // errorClass categorizes HTTP error responses.
 type errorClass int
@@ -61,7 +64,8 @@ func IsForbidden(err error) bool {
 
 // IsLoginRedirect returns true if the response was a login redirect.
 func IsLoginRedirect(err error) bool {
-	if ae, ok := err.(*APIError); ok {
+	var ae *APIError
+	if errors.As(err, &ae) {
 		return ae.Class == errLoginRedirect
 	}
 	return false

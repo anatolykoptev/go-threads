@@ -218,6 +218,88 @@ func TestPrivateReads_CDP_TargetInstagramWebHost(t *testing.T) {
 	}
 }
 
+// withZeroDelays replaces stealth delay defaults with near-zero values for the
+// duration of the test and restores them on cleanup.
+func withZeroDelays(t *testing.T) {
+	t.Helper()
+	oldJitter := stealth.DefaultJitter
+	oldBackoff := stealth.DefaultBackoff
+	t.Cleanup(func() {
+		stealth.DefaultJitter = oldJitter
+		stealth.DefaultBackoff = oldBackoff
+	})
+	stealth.DefaultJitter = stealth.Jitter{Min: 0, Max: 1}
+	stealth.DefaultBackoff = stealth.BackoffConfig{InitialWait: 1, MaxWait: 1, Multiplier: 1}
+}
+
+func TestDoGraphQL_CDP_RedirectIsLoginRedirect(t *testing.T) {
+	redirectBody := `{"redirected":true,"status":302}`
+	ts, _, _ := cdpTestServer(t, "/api/v1/chrome/interact", redirectBody)
+	defer ts.Close()
+	withZeroDelays(t)
+
+	var successMetrics []string
+	cfg := Config{
+		WowaURL: ts.URL,
+		Session: "threads-cdp",
+		MetricsHook: func(endpoint string, success bool) {
+			if success {
+				successMetrics = append(successMetrics, endpoint)
+			}
+		},
+	}
+	c, err := NewClient(cfg)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	c.lsd = "AVqDh-2lkJ8"
+	c.lsdAt = time.Now()
+
+	_, err = c.doGraphQL(context.Background(), "Test", docIDGetThreadLikers, "BarcelonaMediaLikersQuery", map[string]any{"mediaID": "123"})
+	if err == nil {
+		t.Fatal("expected an error for a redirect")
+	}
+	if !IsLoginRedirect(err) {
+		t.Fatalf("expected IsLoginRedirect, got %v", err)
+	}
+	if len(successMetrics) != 0 {
+		t.Fatalf("success metric recorded on redirect: %v", successMetrics)
+	}
+}
+
+func TestFetchPage_CDP_RedirectIsLoginRedirect(t *testing.T) {
+	redirectBody := `{"redirected":true,"status":302}`
+	ts, _, _ := cdpTestServer(t, "/api/v1/chrome/interact", redirectBody)
+	defer ts.Close()
+	withZeroDelays(t)
+
+	var successMetrics []string
+	cfg := Config{
+		WowaURL: ts.URL,
+		Session: "threads-cdp",
+		MetricsHook: func(endpoint string, success bool) {
+			if success {
+				successMetrics = append(successMetrics, endpoint)
+			}
+		},
+	}
+	c, err := NewClient(cfg)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	_, err = c.fetchPage(context.Background(), "Test", threadsBaseURL+"/@zuck/post/ABC123")
+	if err == nil {
+		t.Fatal("expected an error for a redirect")
+	}
+	if !IsLoginRedirect(err) {
+		t.Fatalf("expected IsLoginRedirect, got %v", err)
+	}
+	if len(successMetrics) != 0 {
+		t.Fatalf("success metric recorded on redirect: %v", successMetrics)
+	}
+}
+
 // fakeHTTPDoer is a go-stealth backend that always returns 404, forcing the
 // go-stealth leg to fail fast without network.
 type fakeHTTPDoer struct{}
