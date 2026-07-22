@@ -23,6 +23,7 @@ func (c *Client) GetUser(ctx context.Context, username string) (*ThreadsUser, er
 
 // GetUserByID fetches a user profile by numeric userID.
 // Requires Config.WowaURL (CDP transport); falls back to an error in SSR mode.
+// NOTE: degraded — the profile doc_id has rotated (returns "user data is null"); prefer GetUser(username) (SSR) for reliable profiles.
 func (c *Client) GetUserByID(ctx context.Context, userID string) (*ThreadsUser, error) {
 	if c.wowa == nil {
 		return nil, fmt.Errorf("GetUserByID: not supported in SSR mode, use GetUser(username) instead")

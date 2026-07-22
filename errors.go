@@ -48,7 +48,8 @@ func (e *APIError) Error() string {
 
 // IsRateLimited returns true if the error is a rate limit response.
 func IsRateLimited(err error) bool {
-	if ae, ok := err.(*APIError); ok {
+	var ae *APIError
+	if errors.As(err, &ae) {
 		return ae.Class == errRateLimited
 	}
 	return false
@@ -56,7 +57,8 @@ func IsRateLimited(err error) bool {
 
 // IsForbidden returns true if the error is a 403 response.
 func IsForbidden(err error) bool {
-	if ae, ok := err.(*APIError); ok {
+	var ae *APIError
+	if errors.As(err, &ae) {
 		return ae.Class == errForbidden
 	}
 	return false
