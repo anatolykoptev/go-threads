@@ -6,9 +6,15 @@ const (
 	igWebBaseURL   = "https://www.instagram.com"
 	igAppID        = "238260118697367" // Threads/Barcelona web app id
 	igWebAppID     = "936619743392459" // Instagram web app id
+	xAsbdID        = "129477"          // Threads GraphQL x-asbd-id value
 
 	// GraphQL doc IDs
+	docIDUserProfile     = "23996318473300828"
+	docIDUserThreads     = "6232751443445612"
+	docIDUserReplies     = "6307072669391286"
+	docIDSingleThread    = "5587632691339264"
 	docIDGetThreadLikers = "9360915773983802"
+	docIDSearchUsers     = "9509001572511267"
 
 	// Private API paths (mobile / i.instagram.com)
 	pathPublishText = "/api/v1/media/configure_text_only_post/"

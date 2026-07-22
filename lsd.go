@@ -2,6 +2,7 @@ package threads
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"regexp"
 	"strconv"
@@ -24,7 +25,13 @@ func (c *Client) ensureLSD(ctx context.Context) (string, error) {
 		return c.lsd, nil
 	}
 
-	token, csrf, fbDtsg, err := fetchLSDToken(c.bc)
+	var token, csrf, fbDtsg string
+	var err error
+	if c.wowa != nil {
+		token, csrf, fbDtsg, err = c.fetchLSDTokenCDP(ctx)
+	} else {
+		token, csrf, fbDtsg, err = fetchLSDToken(c.bc)
+	}
 	if err != nil {
 		return "", err
 	}
@@ -72,6 +79,45 @@ func fetchLSDToken(bc *stealth.BrowserClient) (lsd string, csrf string, fbDtsg s
 	}
 
 	return lsd, csrf, fbDtsg, nil
+}
+
+// fetchLSDTokenCDP extracts LSD, csrftoken, and fb_dtsg from the live browser
+// page on www.threads.net, avoiding a datacenter go-stealth fetch.
+func (c *Client) fetchLSDTokenCDP(ctx context.Context) (lsd string, csrf string, fbDtsg string, err error) {
+	script := `(() => {
+  const html = document.documentElement.innerHTML;
+  const extract = (prefix) => {
+    const idx = html.indexOf(prefix);
+    if (idx === -1) return "";
+    const start = idx + prefix.length;
+    const end = html.indexOf('"', start);
+    return end === -1 ? "" : html.substring(start, end);
+  };
+  const cm = document.cookie.match(/csrftoken=([^;]+)/);
+  return {
+    lsd: extract('LSD",[],{"token":"'),
+    csrf: cm ? cm[1] : "",
+    fbDtsg: extract('"DTSGInitialData",[],{"token":"')
+  };
+})()`
+
+	pageURL := threadsBaseURL + "/@instagram"
+	res, err := c.wowa.interact(ctx, c.cfg.Session, pageURL, []wowaAction{{Type: "evaluate", Script: script}})
+	if err != nil {
+		return "", "", "", fmt.Errorf("fetch LSD token via CDP: %w", err)
+	}
+	var r struct {
+		LSD    string `json:"lsd"`
+		CSRF   string `json:"csrf"`
+		FbDtsg string `json:"fbDtsg"`
+	}
+	if err := json.Unmarshal(res, &r); err != nil {
+		return "", "", "", fmt.Errorf("unmarshal LSD token result: %w", err)
+	}
+	if r.LSD == "" {
+		return "", "", "", fmt.Errorf("LSD token not found in browser page")
+	}
+	return r.LSD, r.CSRF, r.FbDtsg, nil
 }
 
 // computeJazoest computes the jazoest parameter from fb_dtsg.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -23,11 +24,21 @@ const (
 // GetInstagramPost fetches a post from instagram.com by shortcode.
 // Works with /p/{code}/ and /reel/{code}/ URLs.
 //
-// Strategy (ordered by reliability):
-//  1. kkinstagram.com proxy — redirect to CDN video URL (no auth needed)
-//  2. Instagram embed page — parse GraphQL data from /p/{code}/embed/
-//  3. Direct SSR scraping — requires session cookies in Config
+// When Config.WowaURL is set the request is routed through the browser CDP
+// transport as an in-page fetch to www.instagram.com. Otherwise the legacy
+// proxy -> embed -> SSR fallback chain is used.
 func (c *Client) GetInstagramPost(ctx context.Context, shortcode string) (*Thread, error) {
+	if c.wowa != nil {
+		thread, err := c.getInstagramViaCDP(ctx, shortcode)
+		if err == nil && thread != nil && len(thread.Items) > 0 {
+			return thread, nil
+		}
+		if err != nil {
+			slog.Debug("instagram: CDP method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
+		}
+		return nil, fmt.Errorf("GetInstagramPost: CDP method failed for %s", shortcode)
+	}
+
 	// Method 1: kkinstagram.com proxy (most reliable, no auth)
 	thread, err := c.getInstagramViaProxy(ctx, shortcode)
 	if err == nil && thread != nil && hasVideo(thread) {
@@ -66,6 +77,45 @@ func hasVideo(t *Thread) bool {
 		}
 	}
 	return false
+}
+
+// GetInstagramUser fetches an Instagram user profile by username using the
+// authenticated web API. Requires Config.WowaURL (CDP transport).
+func (c *Client) GetInstagramUser(ctx context.Context, username string) (*ThreadsUser, error) {
+	if c.wowa == nil {
+		return nil, fmt.Errorf("GetInstagramUser: CDP transport required (set WowaURL in Config)")
+	}
+
+	params := url.Values{}
+	params.Set("username", username)
+	body, err := c.doCDP(ctx, "GetInstagramUser", http.MethodGet, "/api/v1/users/web_profile_info/", params)
+	if err != nil {
+		return nil, fmt.Errorf("GetInstagramUser: %w", err)
+	}
+
+	user, err := parseUser(body)
+	if err != nil {
+		return nil, fmt.Errorf("GetInstagramUser: %w", err)
+	}
+	return user, nil
+}
+
+// getInstagramViaCDP fetches an Instagram post JSON via the web
+// /p/<shortcode>/?__a=1&__d=dis endpoint in-page from www.instagram.com.
+func (c *Client) getInstagramViaCDP(ctx context.Context, shortcode string) (*Thread, error) {
+	params := url.Values{}
+	params.Set("__a", "1")
+	params.Set("__d", "dis")
+	body, err := c.doCDP(ctx, "GetInstagramPost", http.MethodGet, "/p/"+shortcode+"/", params)
+	if err != nil {
+		return nil, err
+	}
+
+	post, err := parseInstagramPost(body)
+	if err != nil {
+		return nil, err
+	}
+	return &Thread{Items: []Post{*post}}, nil
 }
 
 // --- Method 1: kkinstagram.com proxy ---

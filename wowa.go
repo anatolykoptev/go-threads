@@ -147,9 +147,9 @@ func parseFetchResult(data json.RawMessage) (fetchResult, error) {
 }
 
 // buildFetchScript constructs the in-page fetch JS. The endpoint, method,
-// body, app id, lsd and friendly name are interpolated via json.Marshal of the
-// Go strings, producing safe JS string literals — never string-concat raw.
-func buildFetchScript(endpoint, method, body, appID, lsd, friendlyName string) (string, error) {
+// body, app id, lsd, asbd id and friendly name are interpolated via json.Marshal
+// of the Go strings, producing safe JS string literals — never string-concat raw.
+func buildFetchScript(endpoint, method, body, appID, lsd, asbdID, friendlyName string) (string, error) {
 	epJSON, err := json.Marshal(endpoint)
 	if err != nil {
 		return "", fmt.Errorf("marshal endpoint: %w", err)
@@ -170,6 +170,10 @@ func buildFetchScript(endpoint, method, body, appID, lsd, friendlyName string) (
 	if err != nil {
 		return "", fmt.Errorf("marshal lsd: %w", err)
 	}
+	asbdJSON, err := json.Marshal(asbdID)
+	if err != nil {
+		return "", fmt.Errorf("marshal asbd id: %w", err)
+	}
 	friendlyJSON, err := json.Marshal(friendlyName)
 	if err != nil {
 		return "", fmt.Errorf("marshal friendly name: %w", err)
@@ -179,11 +183,14 @@ func buildFetchScript(endpoint, method, body, appID, lsd, friendlyName string) (
   const cm = document.cookie.match(/csrftoken=([^;]+)/);
   const csrf = cm ? cm[1] : "";
   const lsd = ` + string(lsdJSON) + `;
+  const asbd = ` + string(asbdJSON) + `;
+  const friend = ` + string(friendlyJSON) + `;
   const opts = {method:` + string(methodJSON) + `,
     headers:{"x-csrftoken":csrf,"x-ig-app-id":` + string(appIDJSON) + `,"x-requested-with":"XMLHttpRequest","accept":"*/*"},
     credentials:"include", redirect:"manual"};
   if (lsd) opts.headers["x-fb-lsd"] = lsd;
-  if (` + string(friendlyJSON) + `) opts.headers["x-fb-friendly-name"] = ` + string(friendlyJSON) + `;
+  if (asbd) opts.headers["x-asbd-id"] = asbd;
+  if (friend) opts.headers["x-fb-friendly-name"] = friend;
   if (` + string(methodJSON) + ` === "POST") {
     opts.headers["content-type"] = "application/x-www-form-urlencoded";
     opts.body = ` + string(bodyJSON) + `;
@@ -193,6 +200,40 @@ func buildFetchScript(endpoint, method, body, appID, lsd, friendlyName string) (
   const body = await r.text();
   return {status:r.status, body:body};
 })()`, nil
+}
+
+// wowaFetchOnce runs a single in-page fetch via go-wowa, with one on-demand
+// re-navigate retry if the first attempt is redirected/opaque/status-0. It
+// returns the fetchResult for the caller to classify.
+func (c *Client) wowaFetchOnce(ctx context.Context, session, pageURL, script string) (fetchResult, error) {
+	var fr fetchResult
+	res, err := c.wowa.interact(ctx, session, pageURL, []wowaAction{{Type: "evaluate", Script: script}})
+	if err != nil {
+		return fr, fmt.Errorf("go-wowa interact: %w", err)
+	}
+	fr, err = parseFetchResult(res)
+	if err != nil {
+		return fr, fmt.Errorf("parse go-wowa result: %w", err)
+	}
+
+	if fr.Redirected || fr.Status == 302 || fr.Status == 0 {
+		retryRes, rerr := c.wowa.interact(ctx, session, pageURL, []wowaAction{
+			{Type: "navigate", URL: pageURL},
+			{Type: "evaluate", Script: script},
+		})
+		if rerr != nil {
+			// A transport failure on the retry leg is a go-wowa problem, NOT a
+			// redirect — surface it as a wrapped error so it is not misclassified
+			// as a 302 (which downstream treats as block->rotate account).
+			return fr, fmt.Errorf("go-wowa interact (retry): %w", rerr)
+		}
+		retryFR, perr := parseFetchResult(retryRes)
+		if perr != nil {
+			return fr, fmt.Errorf("parse go-wowa result (retry): %w", perr)
+		}
+		return retryFR, nil
+	}
+	return fr, nil
 }
 
 // doCDP routes a private API call through go-wowa's evaluate seam as an
@@ -205,40 +246,18 @@ func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form 
 		return nil, fmt.Errorf("%s: %w", endpoint, err)
 	}
 
-	js, err := buildFetchScript(webURL, method, body, appID, "", "")
+	js, err := buildFetchScript(webURL, method, body, appID, "", "", "")
 	if err != nil {
 		return nil, fmt.Errorf("%s: build fetch script: %w", endpoint, err)
 	}
 
 	pageURL := igWebBaseURL + "/"
-	res, err := c.wowa.interact(ctx, c.cfg.Session, pageURL, []wowaAction{{Type: "evaluate", Script: js}})
+	fr, err := c.wowaFetchOnce(ctx, c.cfg.Session, pageURL, js)
 	if err != nil {
-		return nil, fmt.Errorf("%s: go-wowa interact: %w", endpoint, err)
+		return nil, fmt.Errorf("%s: %w", endpoint, err)
 	}
-	fr, err := parseFetchResult(res)
-	if err != nil {
-		return nil, fmt.Errorf("%s: parse go-wowa result: %w", endpoint, err)
-	}
-
 	if fr.Redirected || fr.Status == 302 || fr.Status == 0 {
-		retryRes, rerr := c.wowa.interact(ctx, c.cfg.Session, pageURL, []wowaAction{
-			{Type: "navigate", URL: pageURL},
-			{Type: "evaluate", Script: js},
-		})
-		if rerr != nil {
-			// A transport failure on the retry leg is a go-wowa problem, NOT a
-			// redirect — surface it as a wrapped error so it is not misclassified
-			// as a 302 (which downstream treats as block->rotate account).
-			return nil, fmt.Errorf("%s: go-wowa interact (retry): %w", endpoint, rerr)
-		}
-		retryFR, perr := parseFetchResult(retryRes)
-		if perr != nil {
-			return nil, fmt.Errorf("%s: parse go-wowa result (retry): %w", endpoint, perr)
-		}
-		if retryFR.Redirected || retryFR.Status == 302 || retryFR.Status == 0 {
-			return nil, &APIError{Status: 302, Class: errLoginRedirect, Message: "redirect detected"}
-		}
-		fr = retryFR
+		return nil, &APIError{Status: 302, Class: errLoginRedirect, Message: "redirect detected"}
 	}
 
 	if fr.Status == 200 && len(fr.Body) > 0 && fr.Body[0] == '<' {
@@ -248,6 +267,66 @@ func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form 
 		return nil, &APIError{Status: fr.Status, Class: classifyHTTPStatus(fr.Status), Message: fmt.Sprintf("HTTP %d", fr.Status)}
 	}
 	return []byte(fr.Body), nil
+}
+
+// doGraphQLCDP routes a Threads GraphQL POST through go-wowa as an in-page
+// same-origin fetch from a www.threads.net tab. It returns the raw response
+// body, the HTTP status, and any transport/script error.
+func (c *Client) doGraphQLCDP(ctx context.Context, endpoint, bodyStr, lsd, friendlyName string) ([]byte, int, error) {
+	script, err := buildFetchScript(
+		threadsBaseURL+"/api/graphql",
+		http.MethodPost,
+		bodyStr,
+		igAppID,
+		lsd,
+		xAsbdID,
+		friendlyName,
+	)
+	if err != nil {
+		return nil, 0, fmt.Errorf("%s: build fetch script: %w", endpoint, err)
+	}
+
+	pageURL := threadsBaseURL + "/"
+	fr, err := c.wowaFetchOnce(ctx, c.cfg.Session, pageURL, script)
+	if err != nil {
+		return nil, 0, fmt.Errorf("%s: %w", endpoint, err)
+	}
+	if fr.Redirected || fr.Status == 302 || fr.Status == 0 {
+		return nil, 302, nil
+	}
+	if fr.Status == 200 && len(fr.Body) > 0 && fr.Body[0] == '<' {
+		return nil, 0, fmt.Errorf("%s: HTML response from API", endpoint)
+	}
+	if fr.Status != 200 {
+		return nil, fr.Status, nil
+	}
+	return []byte(fr.Body), 200, nil
+}
+
+// fetchPageCDP fetches an arbitrary page URL through go-wowa as an in-page
+// same-origin GET. It returns the body, status, and any transport/script error.
+func (c *Client) fetchPageCDP(ctx context.Context, pageURL string) ([]byte, int, error) {
+	appID := igWebAppID
+	if strings.HasPrefix(pageURL, threadsBaseURL) {
+		appID = igAppID
+	}
+
+	script, err := buildFetchScript(pageURL, http.MethodGet, "", appID, "", "", "")
+	if err != nil {
+		return nil, 0, fmt.Errorf("build fetch script: %w", err)
+	}
+
+	fr, err := c.wowaFetchOnce(ctx, c.cfg.Session, pageURL, script)
+	if err != nil {
+		return nil, 0, err
+	}
+	if fr.Redirected || fr.Status == 302 || fr.Status == 0 {
+		return nil, 302, nil
+	}
+	if fr.Status != 200 {
+		return nil, fr.Status, nil
+	}
+	return []byte(fr.Body), 200, nil
 }
 
 // buildWebRequest maps a mobile Private API path to the equivalent Instagram

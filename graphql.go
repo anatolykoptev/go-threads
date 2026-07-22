@@ -7,8 +7,17 @@ import (
 )
 
 // GetUser fetches a user profile by username.
-// Extracts data from the SSR-rendered profile page.
+// With Config.WowaURL set it uses the GraphQL API through the CDP transport;
+// otherwise it falls back to SSR page scraping.
 func (c *Client) GetUser(ctx context.Context, username string) (*ThreadsUser, error) {
+	if c.wowa != nil {
+		userID, _, err := c.resolveUsername(ctx, username)
+		if err != nil {
+			return nil, fmt.Errorf("GetUser: %w", err)
+		}
+		return c.GetUserByID(ctx, userID)
+	}
+
 	_, html, err := c.resolveUsername(ctx, username)
 	if err != nil {
 		return nil, fmt.Errorf("GetUser: %w", err)
@@ -21,17 +30,48 @@ func (c *Client) GetUser(ctx context.Context, username string) (*ThreadsUser, er
 }
 
 // GetUserByID fetches a user profile by numeric userID.
-// Note: requires an extra request since we need the username for the page URL.
-// Prefer GetUser(username) when the username is known.
+// Requires Config.WowaURL (CDP transport); falls back to an error in SSR mode.
 func (c *Client) GetUserByID(ctx context.Context, userID string) (*ThreadsUser, error) {
-	// Threads doesn't expose a direct userID→profile page mapping.
-	// The SSR approach requires a username. This method is kept for API
-	// compatibility but callers should prefer GetUser() with a username.
-	return nil, fmt.Errorf("GetUserByID: not supported in SSR mode, use GetUser(username) instead")
+	if c.wowa == nil {
+		return nil, fmt.Errorf("GetUserByID: not supported in SSR mode, use GetUser(username) instead")
+	}
+
+	variables := map[string]any{"userID": userID}
+	body, err := c.doGraphQL(ctx, "GetUser", docIDUserProfile, "BarcelonaProfileRootQuery", variables)
+	if err != nil {
+		return nil, fmt.Errorf("GetUserByID: %w", err)
+	}
+	user, err := parseUser(body)
+	if err != nil {
+		return nil, fmt.Errorf("GetUserByID: %w", err)
+	}
+	return user, nil
 }
 
 // GetUserThreads fetches recent threads by username.
+// With Config.WowaURL set it uses the GraphQL API through the CDP transport;
+// otherwise it falls back to SSR page scraping.
 func (c *Client) GetUserThreads(ctx context.Context, username string, count int) ([]*Thread, error) {
+	if c.wowa != nil {
+		userID, _, err := c.resolveUsername(ctx, username)
+		if err != nil {
+			return nil, fmt.Errorf("GetUserThreads: %w", err)
+		}
+		variables := map[string]any{"userID": userID}
+		body, err := c.doGraphQL(ctx, "GetUserThreads", docIDUserThreads, "BarcelonaProfileThreadsTabQuery", variables)
+		if err != nil {
+			return nil, fmt.Errorf("GetUserThreads: %w", err)
+		}
+		threads, err := parseUserThreads(body)
+		if err != nil {
+			return nil, fmt.Errorf("GetUserThreads: %w", err)
+		}
+		if count > 0 && len(threads) > count {
+			threads = threads[:count]
+		}
+		return threads, nil
+	}
+
 	_, html, err := c.resolveUsername(ctx, username)
 	if err != nil {
 		return nil, fmt.Errorf("GetUserThreads: %w", err)
@@ -46,9 +86,22 @@ func (c *Client) GetUserThreads(ctx context.Context, username string, count int)
 	return threads, nil
 }
 
-// GetUserWithThreads fetches both user profile and threads in a single request.
-// More efficient than calling GetUser + GetUserThreads separately.
+// GetUserWithThreads fetches both user profile and threads.
+// With Config.WowaURL set it composes two GraphQL calls through the CDP
+// transport; otherwise it falls back to SSR page scraping.
 func (c *Client) GetUserWithThreads(ctx context.Context, username string, count int) (*ThreadsUser, []*Thread, error) {
+	if c.wowa != nil {
+		user, err := c.GetUser(ctx, username)
+		if err != nil {
+			return nil, nil, fmt.Errorf("GetUserWithThreads user: %w", err)
+		}
+		threads, err := c.GetUserThreads(ctx, username, count)
+		if err != nil {
+			return user, nil, nil
+		}
+		return user, threads, nil
+	}
+
 	_, html, err := c.resolveUsername(ctx, username)
 	if err != nil {
 		return nil, nil, fmt.Errorf("GetUserWithThreads: %w", err)
@@ -61,7 +114,6 @@ func (c *Client) GetUserWithThreads(ctx context.Context, username string, count 
 
 	threads, err := parseThreadsFromSSR(html)
 	if err != nil {
-		// User exists but threads might be empty — return user with nil threads
 		return user, nil, nil
 	}
 	if count > 0 && len(threads) > count {
@@ -127,8 +179,30 @@ func parseThreadFromSSR(html []byte) (*Thread, []*Thread, error) {
 
 // --- SSR-based GraphQL methods ---
 
-// GetUserReplies fetches reply threads by username from the replies page.
+// GetUserReplies fetches reply threads by username.
+// With Config.WowaURL set it uses the GraphQL API through the CDP transport;
+// otherwise it falls back to SSR page scraping.
 func (c *Client) GetUserReplies(ctx context.Context, username string, count int) ([]*Thread, error) {
+	if c.wowa != nil {
+		userID, _, err := c.resolveUsername(ctx, username)
+		if err != nil {
+			return nil, fmt.Errorf("GetUserReplies: %w", err)
+		}
+		variables := map[string]any{"userID": userID}
+		body, err := c.doGraphQL(ctx, "GetUserReplies", docIDUserReplies, "BarcelonaProfileRepliesTabQuery", variables)
+		if err != nil {
+			return nil, fmt.Errorf("GetUserReplies: %w", err)
+		}
+		threads, err := parseUserThreads(body)
+		if err != nil {
+			return nil, fmt.Errorf("GetUserReplies: %w", err)
+		}
+		if count > 0 && len(threads) > count {
+			threads = threads[:count]
+		}
+		return threads, nil
+	}
+
 	repliesURL := threadsBaseURL + "/@" + username + "/replies"
 	html, err := c.fetchPage(ctx, "GetUserReplies", repliesURL)
 	if err != nil {
@@ -166,8 +240,35 @@ func (c *Client) GetThreadLikers(ctx context.Context, threadID string, count int
 }
 
 // SearchUsers searches for users by query string.
-// Delegates to the Private API (requires authentication).
+// With Config.WowaURL set it uses the Threads GraphQL API through the CDP
+// transport; otherwise it delegates to the Private API (requires authentication).
 func (c *Client) SearchUsers(ctx context.Context, query string, count int) ([]*ThreadsUser, error) {
+	if c.wowa != nil {
+		variables := map[string]any{
+			"query":                                query,
+			"first":                                count,
+			"should_fetch_ig_inactive_on_text_app": nil,
+			"should_fetch_friendship_status":       false,
+			"should_fetch_fediverse_profiles":      false,
+			"hide_unconnected_private":             false,
+			"__relay_internal__pv__BarcelonaIsLoggedInrelayprovider":      true,
+			"__relay_internal__pv__BarcelonaIsCrawlerrelayprovider":       false,
+			"__relay_internal__pv__BarcelonaHasDisplayNamesrelayprovider": false,
+		}
+		body, err := c.doGraphQL(ctx, "SearchUsers", docIDSearchUsers, "BarcelonaSearchUsersQuery", variables)
+		if err != nil {
+			return nil, fmt.Errorf("SearchUsers: %w", err)
+		}
+		users, err := parseSearchUsers(body)
+		if err != nil {
+			return nil, fmt.Errorf("SearchUsers: %w", err)
+		}
+		if count > 0 && len(users) > count {
+			users = users[:count]
+		}
+		return users, nil
+	}
+
 	if !c.IsAuthenticated() {
 		return nil, fmt.Errorf("SearchUsers: authentication required (set Token in Config)")
 	}

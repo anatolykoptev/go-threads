@@ -19,6 +19,7 @@ func TestBuildFetchScript_WebEndpointAndHeaders(t *testing.T) {
 		igWebAppID,
 		"",
 		"",
+		"",
 	)
 	if err != nil {
 		t.Fatalf("buildFetchScript: %v", err)
@@ -47,6 +48,7 @@ func TestBuildFetchScript_GraphQLHeaders(t *testing.T) {
 		"doc_id=123&variables=%7B%7D",
 		igAppID,
 		"AVqDh-2lkJ8",
+		xAsbdID,
 		"BarcelonaProfileRootQuery",
 	)
 	if err != nil {
@@ -57,8 +59,11 @@ func TestBuildFetchScript_GraphQLHeaders(t *testing.T) {
 		`"https://www.threads.net/api/graphql"`,
 		`const lsd = "AVqDh-2lkJ8";`,
 		`opts.headers["x-fb-lsd"] = lsd;`,
-		`opts.headers["x-fb-friendly-name"] = "BarcelonaProfileRootQuery";`,
+		`const friend = "BarcelonaProfileRootQuery";`,
+		`opts.headers["x-fb-friendly-name"] = friend;`,
 		`"x-ig-app-id":"238260118697367"`,
+		`const asbd = "129477";`,
+		`opts.headers["x-asbd-id"] = asbd;`,
 	}
 	for _, w := range want {
 		if !strings.Contains(script, w) {
