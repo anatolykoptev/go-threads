@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"log/slog"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
@@ -21,8 +22,9 @@ const maxRetries = 3
 
 // Client is the Threads scraping client.
 type Client struct {
-	bc  *stealth.BrowserClient
-	cfg Config
+	bc   *stealth.BrowserClient
+	wowa *wowaTransport // CDP in-page-fetch transport via go-wowa; nil = stealth fallback
+	cfg  Config
 
 	// LSD token state
 	lsd    string
@@ -88,6 +90,9 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 	if cfg.CSRFToken != "" {
 		c.csrf = cfg.CSRFToken
+	}
+	if cfg.WowaURL != "" {
+		c.wowa = newWowaTransport(cfg.WowaURL, cfg.InternalSecret)
 	}
 	return c, nil
 }
@@ -299,12 +304,12 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID, friendlyName st
 // privateAPIHeaders returns headers for Instagram Private API requests.
 func privateAPIHeaders(token string) map[string]string {
 	return map[string]string{
-		"Authorization":    "Bearer " + token,
-		"User-Agent":       barcelonaUA,
-		"Content-Type":     "application/x-www-form-urlencoded",
-		"X-IG-App-ID":      igAppID,
-		"Accept":           "*/*",
-		"Accept-Language":  "en-US,en;q=0.9",
+		"Authorization":               "Bearer " + token,
+		"User-Agent":                  barcelonaUA,
+		"Content-Type":                "application/x-www-form-urlencoded",
+		"X-IG-App-ID":                 igAppID,
+		"Accept":                      "*/*",
+		"Accept-Language":             "en-US,en;q=0.9",
 		"X-Bloks-Is-Layout-RTL":       "false",
 		"X-Bloks-Version-Id":          "5f56efad68e1edec7801f630b5c122704ec5378adbee6609a448f105f34a9c73",
 		"X-IG-WWW-Claim":              "0",
@@ -323,6 +328,10 @@ func privateAPIHeaders(token string) map[string]string {
 
 // doPrivateAPI sends a POST to the Instagram Private API.
 func (c *Client) doPrivateAPI(ctx context.Context, endpoint, path string, form url.Values) ([]byte, error) {
+	if c.wowa != nil {
+		return c.doCDP(ctx, endpoint, http.MethodPost, path, form)
+	}
+
 	c.authMu.RLock()
 	token := c.token
 	c.authMu.RUnlock()
@@ -380,6 +389,10 @@ func (c *Client) doPrivateAPI(ctx context.Context, endpoint, path string, form u
 
 // doPrivateGET sends a GET to the Instagram Private API.
 func (c *Client) doPrivateGET(ctx context.Context, endpoint, path string, params url.Values) ([]byte, error) {
+	if c.wowa != nil {
+		return c.doCDP(ctx, endpoint, http.MethodGet, path, params)
+	}
+
 	c.authMu.RLock()
 	token := c.token
 	c.authMu.RUnlock()

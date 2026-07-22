@@ -43,17 +43,17 @@ type rawVideoVersion struct {
 }
 
 type rawPost struct {
-	Pk        json.Number `json:"pk"`
-	Code      string      `json:"code"`
-	User      rawUser     `json:"user"`
-	Caption   *struct {
+	Pk      json.Number `json:"pk"`
+	Code    string      `json:"code"`
+	User    rawUser     `json:"user"`
+	Caption *struct {
 		Text string `json:"text"`
 	} `json:"caption"`
-	TakenAt         json.Number      `json:"taken_at"`
-	LikeCount       int              `json:"like_count"`
-	TextPostAppInfo *rawTextPostInfo `json:"text_post_app_info"`
-	MediaType       int              `json:"media_type"`
-	ImageVersions2  *rawImageSet     `json:"image_versions2"`
+	TakenAt         json.Number       `json:"taken_at"`
+	LikeCount       int               `json:"like_count"`
+	TextPostAppInfo *rawTextPostInfo  `json:"text_post_app_info"`
+	MediaType       int               `json:"media_type"`
+	ImageVersions2  *rawImageSet      `json:"image_versions2"`
 	VideoVersions   []rawVideoVersion `json:"video_versions"`
 	CarouselMedia   []rawCarouselItem `json:"carousel_media"`
 }
@@ -68,8 +68,8 @@ type rawImageSet struct {
 }
 
 type rawCarouselItem struct {
-	MediaType      int              `json:"media_type"`
-	ImageVersions2 *rawImageSet     `json:"image_versions2"`
+	MediaType      int               `json:"media_type"`
+	ImageVersions2 *rawImageSet      `json:"image_versions2"`
 	VideoVersions  []rawVideoVersion `json:"video_versions"`
 }
 
@@ -83,7 +83,9 @@ const ssrDataPrefix = `"result":{"data":`
 
 // extractSSRBlocks finds all SSR data blocks in the HTML.
 // Threads embeds preloaded query results as:
-//   "result":{"data":{...}},"sequence_number":N
+//
+//	"result":{"data":{...}},"sequence_number":N
+//
 // We find each "result":{"data": prefix and extract the nested JSON object
 // using brace-depth counting (regex won't work for nested JSON).
 func extractSSRBlocks(html []byte) [][]byte {
