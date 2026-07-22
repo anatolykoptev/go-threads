@@ -71,12 +71,12 @@ func TestDoGraphQL_CDP_ScriptTargetsThreadsGraphQL(t *testing.T) {
 		t.Errorf("page URL origin = %q, want %s/", *gotURL, threadsBaseURL)
 	}
 	wantParts := []string{
-		threadsBaseURL + "/api/graphql",
+		threadsBaseURL + "/graphql/query",
 		`"x-ig-app-id":"238260118697367"`,
 		`"x-fb-friendly-name"`,
 		`"BarcelonaMediaLikersQuery"`,
 		`"x-asbd-id"`,
-		`"129477"`,
+		xAsbdID,
 		`"x-fb-lsd"`,
 		`credentials:"include"`,
 		`redirect:"manual"`,
@@ -118,11 +118,14 @@ func TestGetInstagramPost_CDP_TargetsWebEndpoint(t *testing.T) {
 	if !strings.HasPrefix(*gotURL, igWebBaseURL+"/") {
 		t.Errorf("page URL origin = %q, want %s/", *gotURL, igWebBaseURL)
 	}
-	if !strings.Contains(*gotScript, "/p/ABC123DEF/") {
-		t.Errorf("script missing /p/ABC123DEF/: %s", *gotScript)
+	if !strings.Contains(*gotScript, "/api/v1/media/") || !strings.Contains(*gotScript, "/info/") {
+		t.Errorf("script missing /api/v1/media/<id>/info/: %s", *gotScript)
 	}
-	if !strings.Contains(*gotScript, "__a=1") || !strings.Contains(*gotScript, "__d=dis") {
-		t.Errorf("script missing __a=1 / __d=dis: %s", *gotScript)
+	if !strings.Contains(*gotScript, `"x-ig-app-id":"936619743392459"`) {
+		t.Errorf("script missing Instagram web app id: %s", *gotScript)
+	}
+	if !strings.Contains(*gotScript, igWebXAsbdID) {
+		t.Errorf("script missing x-asbd-id %s: %s", igWebXAsbdID, *gotScript)
 	}
 	if strings.Contains(*gotScript, igBaseURL) || strings.Contains(*gotScript, "i.instagram.com") {
 		t.Errorf("script targeted mobile Instagram host: %q", *gotScript)
@@ -268,7 +271,9 @@ func TestDoGraphQL_CDP_RedirectIsLoginRedirect(t *testing.T) {
 }
 
 func TestFetchPage_CDP_RedirectIsLoginRedirect(t *testing.T) {
-	redirectBody := `{"redirected":true,"status":302}`
+	// fetchPageCDP now returns the rendered outerHTML; a login redirect is
+	// detected by searching the HTML body for /accounts/login.
+	redirectBody := `"<html><body><a href=\"/accounts/login\">Log In</a></body></html>"`
 	ts, _, _ := cdpTestServer(t, "/api/v1/chrome/interact", redirectBody)
 	defer ts.Close()
 	withZeroDelays(t)

@@ -43,7 +43,7 @@ func TestBuildFetchScript_WebEndpointAndHeaders(t *testing.T) {
 
 func TestBuildFetchScript_GraphQLHeaders(t *testing.T) {
 	script, err := buildFetchScript(
-		"https://www.threads.net/api/graphql",
+		"https://www.threads.com/graphql/query",
 		http.MethodPost,
 		"doc_id=123&variables=%7B%7D",
 		igAppID,
@@ -56,13 +56,13 @@ func TestBuildFetchScript_GraphQLHeaders(t *testing.T) {
 	}
 
 	want := []string{
-		`"https://www.threads.net/api/graphql"`,
+		`"https://www.threads.com/graphql/query"`,
 		`const lsd = "AVqDh-2lkJ8";`,
 		`opts.headers["x-fb-lsd"] = lsd;`,
 		`const friend = "BarcelonaProfileRootQuery";`,
 		`opts.headers["x-fb-friendly-name"] = friend;`,
 		`"x-ig-app-id":"238260118697367"`,
-		`const asbd = "129477";`,
+		`const asbd = "` + xAsbdID + `";`,
 		`opts.headers["x-asbd-id"] = asbd;`,
 	}
 	for _, w := range want {

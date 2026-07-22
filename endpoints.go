@@ -1,20 +1,21 @@
 package threads
 
 const (
-	threadsBaseURL = "https://www.threads.net"
+	threadsBaseURL = "https://www.threads.com"
 	igBaseURL      = "https://i.instagram.com"
 	igWebBaseURL   = "https://www.instagram.com"
 	igAppID        = "238260118697367" // Threads/Barcelona web app id
 	igWebAppID     = "936619743392459" // Instagram web app id
-	xAsbdID        = "129477"          // Threads GraphQL x-asbd-id value
+	xAsbdID        = "359341"          // Threads GraphQL x-asbd-id value
+	igWebXAsbdID   = "129477"          // Instagram web x-asbd-id value
 
-	// GraphQL doc IDs
+	// Threads GraphQL doc IDs (www.threads.com/graphql/query)
 	docIDUserProfile     = "23996318473300828"
 	docIDUserThreads     = "6232751443445612"
 	docIDUserReplies     = "6307072669391286"
 	docIDSingleThread    = "5587632691339264"
 	docIDGetThreadLikers = "9360915773983802"
-	docIDSearchUsers     = "9509001572511267"
+	docIDSearchUsers     = "27238810212443285"
 
 	// Private API paths (mobile / i.instagram.com)
 	pathPublishText = "/api/v1/media/configure_text_only_post/"
@@ -71,7 +72,7 @@ func requestHeaders(lsd, friendlyName string) map[string]string {
 		"sec-fetch-dest":     "empty",
 		"sec-fetch-mode":     "cors",
 		"sec-fetch-site":     "same-origin",
-		"x-asbd-id":          "129477",
+		"x-asbd-id":          xAsbdID,
 		"x-fb-friendly-name": friendlyName,
 		"x-fb-lsd":           lsd,
 		"x-ig-app-id":        igAppID,

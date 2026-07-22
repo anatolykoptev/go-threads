@@ -10,14 +10,6 @@ import (
 // With Config.WowaURL set it uses the GraphQL API through the CDP transport;
 // otherwise it falls back to SSR page scraping.
 func (c *Client) GetUser(ctx context.Context, username string) (*ThreadsUser, error) {
-	if c.wowa != nil {
-		userID, _, err := c.resolveUsername(ctx, username)
-		if err != nil {
-			return nil, fmt.Errorf("GetUser: %w", err)
-		}
-		return c.GetUserByID(ctx, userID)
-	}
-
 	_, html, err := c.resolveUsername(ctx, username)
 	if err != nil {
 		return nil, fmt.Errorf("GetUser: %w", err)
@@ -245,17 +237,13 @@ func (c *Client) GetThreadLikers(ctx context.Context, threadID string, count int
 func (c *Client) SearchUsers(ctx context.Context, query string, count int) ([]*ThreadsUser, error) {
 	if c.wowa != nil {
 		variables := map[string]any{
-			"query":                                query,
-			"first":                                count,
-			"should_fetch_ig_inactive_on_text_app": nil,
-			"should_fetch_friendship_status":       false,
-			"should_fetch_fediverse_profiles":      false,
-			"hide_unconnected_private":             false,
-			"__relay_internal__pv__BarcelonaIsLoggedInrelayprovider":      true,
-			"__relay_internal__pv__BarcelonaIsCrawlerrelayprovider":       false,
-			"__relay_internal__pv__BarcelonaHasDisplayNamesrelayprovider": false,
+			"query":          query,
+			"search_surface": nil,
+			"__relay_internal__pv__BarcelonaIsInternalUserrelayprovider": false,
+			"__relay_internal__pv__BarcelonaIsLoggedInrelayprovider":     true,
+			"__relay_internal__pv__BarcelonaIsCrawlerrelayprovider":      false,
 		}
-		body, err := c.doGraphQL(ctx, "SearchUsers", docIDSearchUsers, "BarcelonaSearchUsersQuery", variables)
+		body, err := c.doGraphQL(ctx, "SearchUsers", docIDSearchUsers, "BarcelonaSearchUserResultsQuery", variables)
 		if err != nil {
 			return nil, fmt.Errorf("SearchUsers: %w", err)
 		}

@@ -261,7 +261,7 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID, friendlyName st
 			}
 			respBody, _, status, doErr = c.bc.DoWithHeaderOrder(
 				"POST",
-				threadsBaseURL+"/api/graphql",
+				threadsBaseURL+"/graphql/query",
 				headers,
 				strings.NewReader(bodyStr),
 				threadsHeaderOrder,

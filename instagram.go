@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log/slog"
+	"math/big"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -100,13 +101,17 @@ func (c *Client) GetInstagramUser(ctx context.Context, username string) (*Thread
 	return user, nil
 }
 
-// getInstagramViaCDP fetches an Instagram post JSON via the web
-// /p/<shortcode>/?__a=1&__d=dis endpoint in-page from www.instagram.com.
+// getInstagramViaCDP decodes the shortcode to a media id and fetches the
+// post JSON via the web /api/v1/media/<id>/info/ endpoint in-page from
+// www.instagram.com.
 func (c *Client) getInstagramViaCDP(ctx context.Context, shortcode string) (*Thread, error) {
-	params := url.Values{}
-	params.Set("__a", "1")
-	params.Set("__d", "dis")
-	body, err := c.doCDP(ctx, "GetInstagramPost", http.MethodGet, "/p/"+shortcode+"/", params)
+	mediaID, err := mediaIDFromShortcode(shortcode)
+	if err != nil {
+		return nil, fmt.Errorf("decode shortcode %q: %w", shortcode, err)
+	}
+
+	path := fmt.Sprintf("/api/v1/media/%s/info/", mediaID)
+	body, err := c.doCDP(ctx, "GetInstagramPost", http.MethodGet, path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -116,6 +121,22 @@ func (c *Client) getInstagramViaCDP(ctx context.Context, shortcode string) (*Thr
 		return nil, err
 	}
 	return &Thread{Items: []Post{*post}}, nil
+}
+
+const igShortcodeAlphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
+
+// mediaIDFromShortcode decodes an Instagram shortcode to its numeric media id.
+func mediaIDFromShortcode(shortcode string) (string, error) {
+	n := big.NewInt(0)
+	for _, r := range shortcode {
+		idx := strings.IndexRune(igShortcodeAlphabet, r)
+		if idx < 0 {
+			return "", fmt.Errorf("invalid character %q in shortcode", r)
+		}
+		n.Mul(n, big.NewInt(64))
+		n.Add(n, big.NewInt(int64(idx)))
+	}
+	return n.String(), nil
 }
 
 // --- Method 1: kkinstagram.com proxy ---

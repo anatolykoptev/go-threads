@@ -246,7 +246,12 @@ func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form 
 		return nil, fmt.Errorf("%s: %w", endpoint, err)
 	}
 
-	js, err := buildFetchScript(webURL, method, body, appID, "", "", "")
+	asbd := ""
+	if strings.HasPrefix(webURL, igWebBaseURL) {
+		asbd = igWebXAsbdID
+	}
+
+	js, err := buildFetchScript(webURL, method, body, appID, "", asbd, "")
 	if err != nil {
 		return nil, fmt.Errorf("%s: build fetch script: %w", endpoint, err)
 	}
@@ -270,11 +275,11 @@ func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form 
 }
 
 // doGraphQLCDP routes a Threads GraphQL POST through go-wowa as an in-page
-// same-origin fetch from a www.threads.net tab. It returns the raw response
+// same-origin fetch from a www.threads.com tab. It returns the raw response
 // body, the HTTP status, and any transport/script error.
 func (c *Client) doGraphQLCDP(ctx context.Context, endpoint, bodyStr, lsd, friendlyName string) ([]byte, int, error) {
 	script, err := buildFetchScript(
-		threadsBaseURL+"/api/graphql",
+		threadsBaseURL+"/graphql/query",
 		http.MethodPost,
 		bodyStr,
 		igAppID,
@@ -303,30 +308,28 @@ func (c *Client) doGraphQLCDP(ctx context.Context, endpoint, bodyStr, lsd, frien
 	return []byte(fr.Body), 200, nil
 }
 
-// fetchPageCDP fetches an arbitrary page URL through go-wowa as an in-page
-// same-origin GET. It returns the body, status, and any transport/script error.
+// fetchPageCDP navigates to an arbitrary page URL through go-wowa and returns
+// the rendered page HTML (document.documentElement.outerHTML). It returns 200
+// on success, or 302 if the page contains a login redirect.
 func (c *Client) fetchPageCDP(ctx context.Context, pageURL string) ([]byte, int, error) {
-	appID := igWebAppID
-	if strings.HasPrefix(pageURL, threadsBaseURL) {
-		appID = igAppID
+	actions := []wowaAction{
+		{Type: "navigate", URL: pageURL},
+		{Type: "evaluate", Script: "document.documentElement.outerHTML"},
+	}
+	res, err := c.wowa.interact(ctx, c.cfg.Session, pageURL, actions)
+	if err != nil {
+		return nil, 0, fmt.Errorf("go-wowa interact: %w", err)
 	}
 
-	script, err := buildFetchScript(pageURL, http.MethodGet, "", appID, "", "", "")
-	if err != nil {
-		return nil, 0, fmt.Errorf("build fetch script: %w", err)
+	var html string
+	if err := json.Unmarshal(res, &html); err != nil {
+		return nil, 0, fmt.Errorf("unmarshal page HTML: %w", err)
 	}
-
-	fr, err := c.wowaFetchOnce(ctx, c.cfg.Session, pageURL, script)
-	if err != nil {
-		return nil, 0, err
+	body := []byte(html)
+	if isLoginRedirect(body) {
+		return nil, 302, &APIError{Status: 302, Class: errLoginRedirect, Message: "login redirect detected"}
 	}
-	if fr.Redirected || fr.Status == 302 || fr.Status == 0 {
-		return nil, 302, &APIError{Status: 302, Class: errLoginRedirect, Message: "redirect detected"}
-	}
-	if fr.Status != 200 {
-		return nil, fr.Status, nil
-	}
-	return []byte(fr.Body), 200, nil
+	return body, 200, nil
 }
 
 // buildWebRequest maps a mobile Private API path to the equivalent Instagram

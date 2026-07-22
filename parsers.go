@@ -15,17 +15,25 @@ type rawBioLink struct {
 }
 
 type rawUser struct {
-	Pk                   json.Number       `json:"pk"`
-	Username             string            `json:"username"`
-	FullName             string            `json:"full_name"`
-	Biography            string            `json:"biography"`
-	BioLinks             []rawBioLink      `json:"bio_links"`
-	ProfilePicURL        string            `json:"profile_pic_url"`
-	IsVerified           bool              `json:"is_verified"`
-	IsPrivate            bool              `json:"text_post_app_is_private"`
-	FollowerCount        int               `json:"follower_count"`
-	FollowingCount       int               `json:"following_count"`
-	ThreadCount          int               `json:"text_post_app_threads_count,omitempty"`
+	ID             string       `json:"id"`
+	Pk             json.Number  `json:"pk"`
+	Username       string       `json:"username"`
+	FullName       string       `json:"full_name"`
+	Biography      string       `json:"biography"`
+	BioLinks       []rawBioLink `json:"bio_links"`
+	ProfilePicURL  string       `json:"profile_pic_url"`
+	IsVerified     bool         `json:"is_verified"`
+	IsPrivate      bool         `json:"text_post_app_is_private"`
+	IsPrivateIG    bool         `json:"is_private"`
+	FollowerCount  int          `json:"follower_count"`
+	FollowingCount int          `json:"following_count"`
+	ThreadCount    int          `json:"text_post_app_threads_count,omitempty"`
+	FollowedBy     *struct {
+		Count int `json:"count"`
+	} `json:"edge_followed_by,omitempty"`
+	Following *struct {
+		Count int `json:"count"`
+	} `json:"edge_follow,omitempty"`
 	HdProfilePicVersions []rawImageVersion `json:"hd_profile_pic_versions,omitempty"`
 }
 
@@ -304,10 +312,33 @@ func parseLikers(body []byte) ([]*ThreadsUser, error) {
 }
 
 // parseSearchUsers parses a SearchUsers GraphQL response.
-// Supports both current (xdt_api__v1__users__search_connection.edges) and
-// legacy (searchResults.users) formats.
+// Supports current (searchResults.edges[].node), legacy
+// (xdt_api__v1__users__search_connection.edges[].node.text_post_app_user),
+// and older (searchResults.users[]) formats.
 func parseSearchUsers(body []byte) ([]*ThreadsUser, error) {
 	var current struct {
+		Data struct {
+			SearchResults struct {
+				Edges []struct {
+					Node rawUser `json:"node"`
+				} `json:"edges"`
+			} `json:"searchResults"`
+		} `json:"data"`
+	}
+	if json.Unmarshal(body, &current) == nil && len(current.Data.SearchResults.Edges) > 0 {
+		var users []*ThreadsUser
+		for _, edge := range current.Data.SearchResults.Edges {
+			if (edge.Node.Pk.String() == "" && edge.Node.ID == "") || edge.Node.Username == "" {
+				continue
+			}
+			users = append(users, convertUser(edge.Node))
+		}
+		if len(users) > 0 {
+			return users, nil
+		}
+	}
+
+	var xdt struct {
 		Data struct {
 			SearchConnection struct {
 				Edges []struct {
@@ -318,15 +349,17 @@ func parseSearchUsers(body []byte) ([]*ThreadsUser, error) {
 			} `json:"xdt_api__v1__users__search_connection"`
 		} `json:"data"`
 	}
-	if json.Unmarshal(body, &current) == nil && len(current.Data.SearchConnection.Edges) > 0 {
+	if json.Unmarshal(body, &xdt) == nil && len(xdt.Data.SearchConnection.Edges) > 0 {
 		var users []*ThreadsUser
-		for _, edge := range current.Data.SearchConnection.Edges {
+		for _, edge := range xdt.Data.SearchConnection.Edges {
 			if edge.Node.User.Pk.String() == "" || edge.Node.User.Username == "" {
 				continue
 			}
 			users = append(users, convertUser(edge.Node.User))
 		}
-		return users, nil
+		if len(users) > 0 {
+			return users, nil
+		}
 	}
 
 	var legacy struct {
@@ -377,17 +410,30 @@ func convertUser(ru rawUser) *ThreadsUser {
 	for _, bl := range ru.BioLinks {
 		bioLinks = append(bioLinks, BioLink{URL: bl.URL, Title: bl.Title})
 	}
+	id := ru.Pk.String()
+	if id == "" {
+		id = ru.ID
+	}
+	isPrivate := ru.IsPrivate || ru.IsPrivateIG
+	followerCount := ru.FollowerCount
+	followingCount := ru.FollowingCount
+	if ru.FollowedBy != nil && followerCount == 0 {
+		followerCount = ru.FollowedBy.Count
+	}
+	if ru.Following != nil && followingCount == 0 {
+		followingCount = ru.Following.Count
+	}
 	return &ThreadsUser{
-		ID:             ru.Pk.String(),
+		ID:             id,
 		Username:       ru.Username,
 		FullName:       ru.FullName,
 		Bio:            ru.Biography,
 		BioLinks:       bioLinks,
 		ProfilePicURL:  picURL,
 		IsVerified:     ru.IsVerified,
-		IsPrivate:      ru.IsPrivate,
-		FollowerCount:  ru.FollowerCount,
-		FollowingCount: ru.FollowingCount,
+		IsPrivate:      isPrivate,
+		FollowerCount:  followerCount,
+		FollowingCount: followingCount,
 		ThreadCount:    ru.ThreadCount,
 	}
 }
