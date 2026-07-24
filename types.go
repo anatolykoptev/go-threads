@@ -26,6 +26,11 @@ type ThreadsUser struct {
 // Thread represents a thread (a post and its inline items).
 type Thread struct {
 	Items []Post
+	// SourceMethod identifies which transport tier produced this thread:
+	// "cdp" (full engagement metrics), "embed" (public embed, no metrics),
+	// "ssr" (server-rendered page), "proxy" (3rd-party proxy, video URL only).
+	// Empty when set by older code paths that don't tag the source.
+	SourceMethod string
 }
 
 // Post represents a single post within a thread.

@@ -1,6 +1,7 @@
 package threads
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -35,27 +36,22 @@ func (c *Client) GetInstagramPost(ctx context.Context, shortcode string) (*Threa
 	if c.wowa != nil {
 		thread, err := c.getInstagramViaCDP(ctx, shortcode)
 		if err == nil && thread != nil && len(thread.Items) > 0 {
+			thread.SourceMethod = "cdp"
 			return thread, nil
 		}
 		cdpErr = err
-		slog.Warn("instagram: CDP method failed, falling back to legacy chain",
+		slog.Warn("instagram: CDP method failed, falling back to public chain",
 			slog.String("shortcode", shortcode),
 			slog.Any("error", err))
 	}
 
-	// Method 1: kkinstagram.com proxy (most reliable, no auth)
-	thread, err := c.getInstagramViaProxy(ctx, shortcode)
-	if err == nil && thread != nil && hasVideo(thread) {
-		return thread, nil
-	}
-	proxyErr := err
-	if err != nil {
-		slog.Debug("instagram: proxy method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
-	}
-
-	// Method 2: embed page GraphQL data (no auth, parses JS data)
-	thread, err = c.getInstagramViaEmbed(ctx, shortcode)
+	// Method 1: embed page (public, no auth — the working fallback tier).
+	// Tries /reel/<code>/embed/ first (reels), then /p/<code>/embed/ (posts).
+	thread, err := c.getInstagramViaEmbed(ctx, shortcode)
 	if err == nil && thread != nil && len(thread.Items) > 0 {
+		thread.SourceMethod = "embed"
+		slog.Info("instagram: embed fallback succeeded (degraded — no engagement metrics)",
+			slog.String("shortcode", shortcode))
 		return thread, nil
 	}
 	embedErr := err
@@ -63,9 +59,10 @@ func (c *Client) GetInstagramPost(ctx context.Context, shortcode string) (*Threa
 		slog.Debug("instagram: embed method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
 	}
 
-	// Method 3: direct page SSR (requires session cookies)
+	// Method 2: direct page SSR (requires session cookies).
 	thread, err = c.getInstagramViaSSR(ctx, shortcode)
 	if err == nil && thread != nil && len(thread.Items) > 0 {
+		thread.SourceMethod = "ssr"
 		return thread, nil
 	}
 	ssrErr := err
@@ -73,14 +70,26 @@ func (c *Client) GetInstagramPost(ctx context.Context, shortcode string) (*Threa
 		slog.Debug("instagram: SSR method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
 	}
 
+	// Method 3 (LAST RESORT): kkinstagram.com proxy — often 404/403 for reels,
+	// kept last in case the service revives. Returns video URL only.
+	thread, err = c.getInstagramViaProxy(ctx, shortcode)
+	if err == nil && thread != nil && hasVideo(thread) {
+		thread.SourceMethod = "proxy"
+		return thread, nil
+	}
+	proxyErr := err
+	if err != nil {
+		slog.Debug("instagram: proxy method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
+	}
+
 	// Surface every method's error so prod can diagnose the failure. Wrap the
 	// CDP error (the preferred method) with %w so callers can errors.Is/As it.
 	if cdpErr != nil {
-		return nil, fmt.Errorf("GetInstagramPost: all methods failed for %s (proxy: %v; embed: %v; ssr: %v): %w",
-			shortcode, proxyErr, embedErr, ssrErr, cdpErr)
+		return nil, fmt.Errorf("GetInstagramPost: all methods failed for %s (embed: %v; ssr: %v; proxy: %v): %w",
+			shortcode, embedErr, ssrErr, proxyErr, cdpErr)
 	}
-	return nil, fmt.Errorf("GetInstagramPost: all methods failed for %s (proxy: %v; embed: %v; ssr: %v)",
-		shortcode, proxyErr, embedErr, ssrErr)
+	return nil, fmt.Errorf("GetInstagramPost: all methods failed for %s (embed: %v; ssr: %v; proxy: %v)",
+		shortcode, embedErr, ssrErr, proxyErr)
 }
 
 // hasVideo checks if thread contains at least one post with video.
@@ -210,7 +219,7 @@ func (c *Client) getInstagramViaProxy(ctx context.Context, shortcode string) (*T
 	return nil, fmt.Errorf("proxy: no redirect to CDN (status %d)", resp.StatusCode)
 }
 
-// --- Method 2: Instagram embed page ---
+// --- Method 1: Instagram embed page (public, no auth) ---
 
 // embedGraphVideoRe extracts the GraphVideo JSON blob from embed page HTML.
 // Instagram embeds post data as escaped JSON inside a <script> tag.
@@ -218,79 +227,270 @@ var embedGraphVideoRe = regexp.MustCompile(
 	`"__typename"\s*:\s*"GraphVideo"\s*,\s*"id"\s*:\s*"(\d+)"\s*,\s*"shortcode"\s*:\s*"([^"]+)"`,
 )
 
-// embedVideoURLRe extracts video_url from the embed's JSON data.
+// embedVideoURLRe extracts video_url from the embed's JSON data (unescaped form).
 var embedVideoURLRe = regexp.MustCompile(`"video_url"\s*:\s*"([^"]+)"`)
 
 // embedCaptionRe extracts caption text.
 var embedCaptionRe = regexp.MustCompile(`"edge_media_to_caption"\s*:\s*\{"edges"\s*:\s*\[\s*\{"node"\s*:\s*\{"text"\s*:\s*"([^"]*)"`)
 
-// getInstagramViaEmbed fetches the /p/{code}/embed/ page and parses GraphQL data.
-// The embed page returns 200 even without auth and contains post metadata in JS.
+// embedMediaShape is the subset of the contextJSON gql_data.shortcode_media
+// structure we extract from the embed page.
+type embedMediaShape struct {
+	Typename   string `json:"__typename"`
+	ID         string `json:"id"`
+	Shortcode  string `json:"shortcode"`
+	IsVideo    bool   `json:"is_video"`
+	VideoURL   string `json:"video_url"`
+	DisplayURL string `json:"display_url"`
+	Dimensions struct {
+		Width  int `json:"width"`
+		Height int `json:"height"`
+	} `json:"dimensions"`
+	EdgeMediaToCaption struct {
+		Edges []struct {
+			Node struct {
+				Text string `json:"text"`
+			} `json:"node"`
+		} `json:"edges"`
+	} `json:"edge_media_to_caption"`
+	Owner struct {
+		ID       string `json:"id"`
+		Username string `json:"username"`
+	} `json:"owner"`
+}
+
+// getInstagramViaEmbed fetches the embed page and parses the contextJSON blob.
+// For reels it tries /reel/<code>/embed/ first (the /p/ path returns a JS shell
+// with no data for reels); for posts it falls back to /p/<code>/embed/.
+// The embed page returns 200 without auth and contains post metadata as a
+// double-encoded JSON string inside a "contextJSON" field.
 func (c *Client) getInstagramViaEmbed(ctx context.Context, shortcode string) (*Thread, error) {
-	embedURL := igWebBaseURL + "/p/" + shortcode + "/embed/"
-	html, err := c.fetchPage(ctx, "GetInstagramEmbed", embedURL)
-	if err != nil {
-		return nil, fmt.Errorf("fetch embed: %w", err)
+	// Try /reel/ embed first — this is the path that works for reels. The /p/
+	// embed returns a JS-only shell with contextJSON:null for reels.
+	for _, suffix := range []string{"/reel/", "/p/"} {
+		embedURL := igWebBaseURL + suffix + shortcode + "/embed/"
+		html, err := c.fetchPage(ctx, "GetInstagramEmbed", embedURL)
+		if err != nil {
+			slog.Debug("instagram: embed fetch failed",
+				slog.String("shortcode", shortcode),
+				slog.String("path", suffix),
+				slog.String("error", err.Error()))
+			continue
+		}
+		if thread := parseInstagramEmbed(html, shortcode); thread != nil {
+			return thread, nil
+		}
+	}
+	return nil, fmt.Errorf("embed: no media data extracted for %s", shortcode)
+}
+
+// parseInstagramEmbed parses embed page HTML and returns a Thread. It tries
+// the modern contextJSON double-encoded blob first, then falls back to the
+// legacy raw-regex parser, then to og:video meta. Returns nil if nothing
+// parseable is found.
+func parseInstagramEmbed(html []byte, shortcode string) *Thread {
+	// Path 1: modern contextJSON (double-encoded JSON string).
+	if thread := parseEmbedContextJSON(html, shortcode); thread != nil {
+		return thread
 	}
 
 	s := string(html)
 
-	// Check if it's a video post
-	if !embedGraphVideoRe.MatchString(s) {
-		// Not a video — try to extract image data instead
-		return parseInstagramEmbedImage(html, shortcode)
-	}
+	// Path 2: legacy raw-regex parser (unescaped JSON in a <script> tag —
+	// the format older embed pages and our test fixtures use).
+	if embedGraphVideoRe.MatchString(s) {
+		videoURL := extractEscapedField(s, "video_url")
+		if videoURL == "" {
+			if m := embedVideoURLRe.FindStringSubmatch(s); len(m) > 1 {
+				videoURL = m[1]
+			}
+		}
+		if videoURL != "" {
+			videoURL = strings.ReplaceAll(videoURL, `\/`, `/`)
+			videoURL = strings.ReplaceAll(videoURL, "&amp;", "&")
 
-	// Extract video URL from the escaped JSON data
-	videoURL := extractEscapedField(s, "video_url")
-	if videoURL == "" {
-		// Try unescaped variant
-		if m := embedVideoURLRe.FindStringSubmatch(s); len(m) > 1 {
-			videoURL = m[1]
+			caption := extractEscapedField(s, "text")
+			if caption == "" {
+				if m := embedCaptionRe.FindStringSubmatch(s); len(m) > 1 {
+					caption = unescapeJSON(m[1])
+				}
+			}
+
+			post := Post{
+				Code:      shortcode,
+				Text:      caption,
+				MediaType: mediaTypeVideo,
+				Videos:    []MediaVersion{{URL: videoURL}},
+			}
+			if m := embedGraphVideoRe.FindStringSubmatch(s); len(m) > 1 {
+				post.ID = m[1]
+			}
+			return &Thread{Items: []Post{post}}
 		}
 	}
 
-	if videoURL == "" {
-		return nil, fmt.Errorf("embed: GraphVideo found but no video_url")
+	// Path 2b: legacy image embed (data-media-id + display_url).
+	if thread := parseInstagramEmbedImage(html, shortcode); thread != nil {
+		return thread
 	}
 
-	// Unescape URL (embed page escapes slashes)
-	videoURL = strings.ReplaceAll(videoURL, `\/`, `/`)
-	videoURL = strings.ReplaceAll(videoURL, "&amp;", "&")
-
-	// Extract caption
-	caption := extractEscapedField(s, "text")
-	if caption == "" {
-		if m := embedCaptionRe.FindStringSubmatch(s); len(m) > 1 {
-			caption = unescapeJSON(m[1])
+	// Path 3: og:video meta tag (last resort).
+	if thread, err := parseInstagramOGMeta(html); err == nil && thread != nil {
+		if thread.Items[0].Code == "" {
+			thread.Items[0].Code = shortcode
 		}
+		return thread
+	}
+
+	return nil
+}
+
+// parseEmbedContextJSON extracts the double-encoded contextJSON blob from the
+// embed HTML and unmarshals the gql_data.shortcode_media object. Returns nil
+// if the blob is absent, null, or doesn't contain usable media data.
+func parseEmbedContextJSON(html []byte, shortcode string) *Thread {
+	// Locate "contextJSON":"..." — the value is a JSON string (double-encoded).
+	idx := bytes.Index(html, []byte(`"contextJSON"`))
+	if idx < 0 {
+		return nil
+	}
+	// Find the opening quote of the string value after the colon.
+	rest := html[idx+len(`"contextJSON"`):]
+	colon := bytes.IndexByte(rest, ':')
+	if colon < 0 {
+		return nil
+	}
+	rest = rest[colon+1:]
+	// Skip whitespace.
+	rest = bytes.TrimLeft(rest, " \t")
+	if len(rest) == 0 {
+		return nil
+	}
+	// Check for null.
+	if rest[0] == 'n' && bytes.HasPrefix(rest, []byte("null")) {
+		return nil
+	}
+	// Must be a string starting with ".
+	if rest[0] != '"' {
+		return nil
+	}
+
+	// Extract the raw JSON string value (between the opening and closing
+	// unescaped quote). We need to handle \\ and \" escape sequences.
+	rawStr, ok := extractJSONStringValue(rest)
+	if !ok {
+		return nil
+	}
+
+	// rawStr is a valid JSON quoted string (e.g. "{\"context\":...}").
+	// Use json.Unmarshal to decode it — it handles all JSON escape sequences
+	// including \/ (forward slash), \uXXXX, \" — which strconv.Unquote does
+	// NOT support (Go string literals don't allow \/).
+	var innerJSON string
+	if err := json.Unmarshal([]byte(rawStr), &innerJSON); err != nil {
+		return nil
+	}
+
+	// innerJSON is now the unescaped JSON object: {"context":{...},"gql_data":{"shortcode_media":{...}}}
+	var wrapper struct {
+		Context struct {
+			Type      string `json:"type"`
+			Shortcode string `json:"shortcode"`
+		} `json:"context"`
+		GQLData struct {
+			ShortcodeMedia embedMediaShape `json:"shortcode_media"`
+		} `json:"gql_data"`
+	}
+	if json.Unmarshal([]byte(innerJSON), &wrapper) != nil {
+		return nil
+	}
+	media := wrapper.GQLData.ShortcodeMedia
+	if media.ID == "" && media.VideoURL == "" && media.DisplayURL == "" {
+		return nil
+	}
+
+	// If the post is a video but the embed didn't include video_url (some
+	// reels load it via JS only), we can't return a downloadable URL — bail
+	// so the fallback paths (SSR, og:video, proxy) can try.
+	if media.IsVideo && media.VideoURL == "" {
+		return nil
 	}
 
 	post := Post{
-		Code:      shortcode,
-		Text:      caption,
-		MediaType: mediaTypeVideo,
-		Videos:    []MediaVersion{{URL: videoURL}},
+		ID:   media.ID,
+		Code: shortcode,
+	}
+	if media.Shortcode != "" {
+		post.Code = media.Shortcode
 	}
 
-	// Extract media ID
-	if m := embedGraphVideoRe.FindStringSubmatch(s); len(m) > 1 {
-		post.ID = m[1]
+	// Caption.
+	if len(media.EdgeMediaToCaption.Edges) > 0 {
+		post.Text = media.EdgeMediaToCaption.Edges[0].Node.Text
 	}
 
-	return &Thread{Items: []Post{post}}, nil
+	if media.VideoURL != "" {
+		post.MediaType = mediaTypeVideo
+		videoURL := strings.ReplaceAll(media.VideoURL, "&amp;", "&")
+		v := MediaVersion{URL: videoURL, Width: media.Dimensions.Width, Height: media.Dimensions.Height}
+		post.Videos = []MediaVersion{v}
+	} else {
+		post.MediaType = 1 // image
+		displayURL := strings.ReplaceAll(media.DisplayURL, "&amp;", "&")
+		post.Images = []MediaVersion{{URL: displayURL, Width: media.Dimensions.Width, Height: media.Dimensions.Height}}
+	}
+
+	if media.Owner.Username != "" {
+		post.Author = ThreadsUser{
+			ID:       media.Owner.ID,
+			Username: media.Owner.Username,
+		}
+	}
+
+	return &Thread{Items: []Post{post}}
 }
 
-// parseInstagramEmbedImage extracts image post data from embed page.
-func parseInstagramEmbedImage(html []byte, shortcode string) (*Thread, error) {
-	// Look for data-media-id attribute (present in embed for all post types)
+// extractJSONStringValue extracts a JSON string value starting at s[0]=='"',
+// returning the full quoted string (including surrounding quotes). It handles
+// \\ and \" escape sequences to find the matching closing quote.
+func extractJSONStringValue(s []byte) (string, bool) {
+	if len(s) < 2 || s[0] != '"' {
+		return "", false
+	}
+	var b strings.Builder
+	b.WriteByte('"')
+	i := 1
+	for i < len(s) {
+		c := s[i]
+		if c == '\\' {
+			// Copy the escape sequence verbatim (backslash + next char).
+			if i+1 >= len(s) {
+				return "", false
+			}
+			b.WriteByte(c)
+			b.WriteByte(s[i+1])
+			i += 2
+			continue
+		}
+		if c == '"' {
+			b.WriteByte('"')
+			return b.String(), true
+		}
+		b.WriteByte(c)
+		i++
+	}
+	return "", false
+}
+
+// parseInstagramEmbedImage extracts image post data from embed page (legacy
+// data-media-id path). Returns nil if no data-media-id is found.
+func parseInstagramEmbedImage(html []byte, shortcode string) *Thread {
 	mediaIDRe := regexp.MustCompile(`data-media-id="(\d+)"`)
 	m := mediaIDRe.FindSubmatch(html)
 	if len(m) < 2 {
-		return nil, fmt.Errorf("embed: no media data found")
+		return nil
 	}
 
-	// Extract display_url for images
 	displayURL := extractEscapedFieldBytes(html, "display_url")
 	if displayURL != "" {
 		displayURL = strings.ReplaceAll(displayURL, `\/`, `/`)
@@ -306,7 +506,7 @@ func parseInstagramEmbedImage(html []byte, shortcode string) (*Thread, error) {
 		post.Images = []MediaVersion{{URL: displayURL}}
 	}
 
-	return &Thread{Items: []Post{post}}, nil
+	return &Thread{Items: []Post{post}}
 }
 
 // extractEscapedField finds a JSON field value in potentially escaped JSON.

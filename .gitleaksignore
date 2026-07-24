@@ -1,1 +1,6 @@
 lsd_test.go:generic-api-key:14
+# Real Instagram embed HTML fixture — these are public per-page anti-CSRF
+# tokens (ajaxpipe_token, compat_iframe_token, LSD token) embedded in the
+# public embed page HTML, not secrets. Ephemeral, rotated per page load.
+testdata/embed_reel_real.html:generic-api-key:3
+testdata/embed_reel_real.html:generic-api-key:10
