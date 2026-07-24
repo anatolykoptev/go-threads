@@ -327,6 +327,90 @@ func TestParseSearchUsersSkipsBlankUser(t *testing.T) {
 	}
 }
 
+func TestParseInstagramPostEngagementCounts(t *testing.T) {
+	// Fixture mirrors the REAL items[0] shape returned by the IG web
+	// /api/v1/media/<id>/info/ endpoint (captured live via the CDP transport).
+	// The engagement-count keys confirmed present: like_count, play_count,
+	// ig_play_count, comment_count, media_repost_count.
+	body := []byte(`{
+		"items": [
+			{
+				"pk": "3727980973477364718",
+				"code": "DO8cvGViIPu",
+				"user": {"pk": "1513490980", "username": "alnassr", "full_name": "Al Nassr", "is_verified": true},
+				"caption": {"text": "Goal!"},
+				"taken_at": 1758630037,
+				"media_type": 2,
+				"like_count": 2244564,
+				"play_count": 56964765,
+				"ig_play_count": 56344732,
+				"comment_count": 24885,
+				"media_repost_count": 27745,
+				"video_versions": [{"url": "https://example.com/vid.mp4", "width": 720, "height": 1280, "type": 101}]
+			}
+		]
+	}`)
+
+	post, err := parseInstagramPost(body)
+	if err != nil {
+		t.Fatalf("parseInstagramPost: %v", err)
+	}
+	if post.LikeCount != 2244564 {
+		t.Errorf("LikeCount = %d, want 2244564", post.LikeCount)
+	}
+	if post.ViewCount != 56964765 {
+		t.Errorf("ViewCount = %d, want 56964765 (play_count)", post.ViewCount)
+	}
+	if post.IGPlayCount != 56344732 {
+		t.Errorf("IGPlayCount = %d, want 56344732 (ig_play_count)", post.IGPlayCount)
+	}
+	if post.CommentCount != 24885 {
+		t.Errorf("CommentCount = %d, want 24885 (comment_count)", post.CommentCount)
+	}
+	if post.RepostCount != 27745 {
+		t.Errorf("RepostCount = %d, want 27745 (media_repost_count)", post.RepostCount)
+	}
+}
+
+func TestParseInstagramPostMissingOptionalCounts(t *testing.T) {
+	// A post WITHOUT the optional engagement-count keys (e.g. an image post
+	// or a Threads text post surfaced via the IG media API) must still parse:
+	// counts default to 0, no error.
+	body := []byte(`{
+		"items": [
+			{
+				"pk": "111222333",
+				"code": "CuXFPB7Mv52",
+				"user": {"pk": "1", "username": "test", "full_name": "Test"},
+				"caption": {"text": "hi"},
+				"taken_at": 1700000000,
+				"media_type": 1,
+				"like_count": 42
+			}
+		]
+	}`)
+
+	post, err := parseInstagramPost(body)
+	if err != nil {
+		t.Fatalf("parseInstagramPost: %v", err)
+	}
+	if post.LikeCount != 42 {
+		t.Errorf("LikeCount = %d, want 42", post.LikeCount)
+	}
+	if post.ViewCount != 0 {
+		t.Errorf("ViewCount = %d, want 0 (key absent)", post.ViewCount)
+	}
+	if post.IGPlayCount != 0 {
+		t.Errorf("IGPlayCount = %d, want 0 (key absent)", post.IGPlayCount)
+	}
+	if post.CommentCount != 0 {
+		t.Errorf("CommentCount = %d, want 0 (key absent)", post.CommentCount)
+	}
+	if post.RepostCount != 0 {
+		t.Errorf("RepostCount = %d, want 0 (key absent)", post.RepostCount)
+	}
+}
+
 func TestParseBioLinksEmpty(t *testing.T) {
 	html := []byte(`
 		<html><script>"result":{"data":{"user":{"pk":"123","username":"nolinks","full_name":"No Links","biography":"Hello","bio_links":[],"profile_pic_url":"https://example.com/pic.jpg","is_verified":false,"text_post_app_is_private":false,"follower_count":10,"following_count":5}},"sequence_number":0}</script>
