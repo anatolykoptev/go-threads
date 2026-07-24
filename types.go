@@ -36,11 +36,21 @@ type Post struct {
 	CreatedAt  time.Time
 	LikeCount  int
 	ReplyCount int
-	MediaType  int // 1=image, 2=video, 8=carousel
-	Author     ThreadsUser
-	IsReply    bool
-	Images     []MediaVersion
-	Videos     []MediaVersion
+	// Engagement counts captured from the IG media API for reels/posts.
+	// ViewCount is the total play/view count (play_count). IGPlayCount is the
+	// IG-only play subset. CommentCount is the IG feed comment count (distinct
+	// from ReplyCount, which is the Threads direct_reply_count). RepostCount is
+	// the IG repost/reshare count (media_repost_count). Zero when the API does
+	// not return the key (e.g. image/text posts).
+	ViewCount    int
+	IGPlayCount  int
+	CommentCount int
+	RepostCount  int
+	MediaType    int // 1=image, 2=video, 8=carousel
+	Author       ThreadsUser
+	IsReply      bool
+	Images       []MediaVersion
+	Videos       []MediaVersion
 }
 
 // MediaVersion represents a single media rendition.

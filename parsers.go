@@ -57,8 +57,18 @@ type rawPost struct {
 	Caption *struct {
 		Text string `json:"text"`
 	} `json:"caption"`
-	TakenAt         json.Number       `json:"taken_at"`
-	LikeCount       int               `json:"like_count"`
+	TakenAt   json.Number `json:"taken_at"`
+	LikeCount int         `json:"like_count"`
+	// Engagement counts the IG media API returns for reels/posts (captured live
+	// from /api/v1/media/<id>/info/). play_count is the total views/plays
+	// (includes FB crosspost plays); ig_play_count is the IG-only subset.
+	// comment_count is the IG feed comment count (distinct from the Threads
+	// direct_reply_count surfaced via text_post_app_info). media_repost_count
+	// is the IG repost/reshare count. All optional — absent for image/text posts.
+	ViewCount       int               `json:"play_count,omitempty"`
+	IGPlayCount     int               `json:"ig_play_count,omitempty"`
+	CommentCount    int               `json:"comment_count,omitempty"`
+	RepostCount     int               `json:"media_repost_count,omitempty"`
 	TextPostAppInfo *rawTextPostInfo  `json:"text_post_app_info"`
 	MediaType       int               `json:"media_type"`
 	ImageVersions2  *rawImageSet      `json:"image_versions2"`
@@ -440,11 +450,15 @@ func convertUser(ru rawUser) *ThreadsUser {
 
 func convertPost(rp rawPost) Post {
 	p := Post{
-		ID:        rp.Pk.String(),
-		Code:      rp.Code,
-		Author:    *convertUser(rp.User),
-		MediaType: rp.MediaType,
-		LikeCount: rp.LikeCount,
+		ID:           rp.Pk.String(),
+		Code:         rp.Code,
+		Author:       *convertUser(rp.User),
+		MediaType:    rp.MediaType,
+		LikeCount:    rp.LikeCount,
+		ViewCount:    rp.ViewCount,
+		IGPlayCount:  rp.IGPlayCount,
+		CommentCount: rp.CommentCount,
+		RepostCount:  rp.RepostCount,
 	}
 
 	if rp.Caption != nil {
