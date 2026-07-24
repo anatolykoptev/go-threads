@@ -92,7 +92,7 @@ func NewClient(cfg Config) (*Client, error) {
 		c.csrf = cfg.CSRFToken
 	}
 	if cfg.WowaURL != "" {
-		c.wowa = newWowaTransport(cfg.WowaURL, cfg.InternalSecret)
+		c.wowa = newWowaTransport(cfg.WowaURL, cfg.InternalSecret, cfg.Proxy)
 	}
 	return c, nil
 }

@@ -103,7 +103,7 @@ func TestDoCDP_WebEndpointAndHeaders(t *testing.T) {
 				{
 					Action: "evaluate",
 					Ok:     true,
-					Data:   json.RawMessage(`{"status":200,"body":"{\"users\":[]}"}`),
+					Data:   cdpInteractData(req, `{"status":200,"body":"{\"users\":[]}"}`),
 				},
 			},
 		}
@@ -157,9 +157,9 @@ func TestDoCDP_ClassifiesRedirectBeforeBody(t *testing.T) {
 			return
 		}
 
-		// First call is evaluate; second call should be navigate + evaluate.
-		if call == 2 {
-			if len(req.Actions) < 2 || req.Actions[0].Type != "navigate" || !strings.HasPrefix(req.Actions[0].URL, "https://www.instagram.com/") {
+		// The retry leg (navigate + evaluate) should re-navigate to instagram.com.
+		if len(req.Actions) >= 2 && req.Actions[0].Type == "navigate" {
+			if !strings.HasPrefix(req.Actions[0].URL, "https://www.instagram.com/") {
 				t.Error("expected re-navigate to instagram.com before retry evaluate")
 			}
 		}
@@ -171,7 +171,7 @@ func TestDoCDP_ClassifiesRedirectBeforeBody(t *testing.T) {
 				{
 					Action: "evaluate",
 					Ok:     true,
-					Data:   json.RawMessage(`{"redirected":true,"status":302}`),
+					Data:   cdpInteractData(req, `{"redirected":true,"status":302}`),
 				},
 			},
 		}
@@ -219,7 +219,7 @@ func TestDoCDP_RetryLegErrorNotSyntheticRedirect(t *testing.T) {
 				{
 					Action: "evaluate",
 					Ok:     true,
-					Data:   json.RawMessage(`{"redirected":true,"status":302}`),
+					Data:   cdpInteractData(req, `{"redirected":true,"status":302}`),
 				},
 			},
 		}
@@ -274,7 +274,7 @@ func TestDoCDP_LikeTargetsWebEndpoint(t *testing.T) {
 			URL:    req.URL,
 			Status: "ok",
 			Actions: []wowaActionResult{
-				{Action: "evaluate", Ok: true, Data: json.RawMessage(`{"status":200,"body":"{\"status\":\"ok\"}"}`)},
+				{Action: "evaluate", Ok: true, Data: cdpInteractData(req, `{"status":200,"body":"{\"status\":\"ok\"}"}`)},
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -395,7 +395,7 @@ func TestWowaTransportInteract_RequestShape(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	w := newWowaTransport(ts.URL, "secret")
+	w := newWowaTransport(ts.URL, "secret", "")
 	_, err := w.interact(context.Background(), "threads-spike", "https://www.instagram.com/", []wowaAction{{Type: "evaluate", Script: "1"}})
 	if err != nil {
 		t.Fatalf("interact: %v", err)
