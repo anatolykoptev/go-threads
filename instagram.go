@@ -26,18 +26,21 @@ const (
 // Works with /p/{code}/ and /reel/{code}/ URLs.
 //
 // When Config.WowaURL is set the request is routed through the browser CDP
-// transport as an in-page fetch to www.instagram.com. Otherwise the legacy
-// proxy -> embed -> SSR fallback chain is used.
+// transport as an in-page fetch to www.instagram.com (preferred). If the CDP
+// method fails (transient challenge, empty response, rate-limit) the legacy
+// proxy -> embed -> SSR fallback chain is attempted. If WowaURL is unset only
+// the legacy chain is used.
 func (c *Client) GetInstagramPost(ctx context.Context, shortcode string) (*Thread, error) {
+	var cdpErr error
 	if c.wowa != nil {
 		thread, err := c.getInstagramViaCDP(ctx, shortcode)
 		if err == nil && thread != nil && len(thread.Items) > 0 {
 			return thread, nil
 		}
-		if err != nil {
-			slog.Debug("instagram: CDP method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
-		}
-		return nil, fmt.Errorf("GetInstagramPost: CDP method failed for %s", shortcode)
+		cdpErr = err
+		slog.Warn("instagram: CDP method failed, falling back to legacy chain",
+			slog.String("shortcode", shortcode),
+			slog.Any("error", err))
 	}
 
 	// Method 1: kkinstagram.com proxy (most reliable, no auth)
@@ -45,6 +48,7 @@ func (c *Client) GetInstagramPost(ctx context.Context, shortcode string) (*Threa
 	if err == nil && thread != nil && hasVideo(thread) {
 		return thread, nil
 	}
+	proxyErr := err
 	if err != nil {
 		slog.Debug("instagram: proxy method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
 	}
@@ -54,6 +58,7 @@ func (c *Client) GetInstagramPost(ctx context.Context, shortcode string) (*Threa
 	if err == nil && thread != nil && len(thread.Items) > 0 {
 		return thread, nil
 	}
+	embedErr := err
 	if err != nil {
 		slog.Debug("instagram: embed method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
 	}
@@ -63,11 +68,19 @@ func (c *Client) GetInstagramPost(ctx context.Context, shortcode string) (*Threa
 	if err == nil && thread != nil && len(thread.Items) > 0 {
 		return thread, nil
 	}
+	ssrErr := err
 	if err != nil {
 		slog.Debug("instagram: SSR method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
 	}
 
-	return nil, fmt.Errorf("GetInstagramPost: all methods failed for %s", shortcode)
+	// Surface every method's error so prod can diagnose the failure. Wrap the
+	// CDP error (the preferred method) with %w so callers can errors.Is/As it.
+	if cdpErr != nil {
+		return nil, fmt.Errorf("GetInstagramPost: all methods failed for %s (proxy: %v; embed: %v; ssr: %v): %w",
+			shortcode, proxyErr, embedErr, ssrErr, cdpErr)
+	}
+	return nil, fmt.Errorf("GetInstagramPost: all methods failed for %s (proxy: %v; embed: %v; ssr: %v)",
+		shortcode, proxyErr, embedErr, ssrErr)
 }
 
 // hasVideo checks if thread contains at least one post with video.

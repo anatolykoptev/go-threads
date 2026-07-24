@@ -377,3 +377,129 @@ func TestReadMethods_WowaURLEmpty_KeepStealthPath(t *testing.T) {
 		})
 	}
 }
+
+// cdpFallbackServer returns a fake go-wowa that distinguishes API evaluate-only
+// calls (doCDP in-page fetch) from page navigate+evaluate calls (fetchPageCDP).
+// apiBody is returned as the raw fetchResult JSON for API calls.
+// pageHTML is returned as the JSON-encoded outerHTML string for page fetches.
+func cdpFallbackServer(t *testing.T, apiBody string, pageHTML string) *httptest.Server {
+	t.Helper()
+	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/api/v1/chrome/interact" {
+			http.Error(w, "not found", http.StatusNotFound)
+			return
+		}
+		var req wowaInteractRequest
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
+		isPageFetch := false
+		for _, a := range req.Actions {
+			if a.Type == "navigate" {
+				isPageFetch = true
+				break
+			}
+		}
+		var data json.RawMessage
+		if isPageFetch {
+			encoded, err := json.Marshal(pageHTML)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			data = encoded
+		} else {
+			data = json.RawMessage(apiBody)
+		}
+		resp := wowaInteractResponse{
+			URL:    req.URL,
+			Status: "ok",
+			Actions: []wowaActionResult{
+				{Action: "evaluate", Ok: true, Data: data},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(resp)
+	}))
+	return ts
+}
+
+// TestGetInstagramPost_CDP_Fails_FallsBackToEmbed proves that when the CDP
+// transport is configured but the CDP method fails (HTML challenge body), the
+// legacy embed fallback chain is still attempted and can succeed.
+//
+// RED before fix: GetInstagramPost hard-returns the CDP error without trying
+// any legacy method.
+// GREEN after fix: CDP failure falls through to proxy -> embed -> SSR; the
+// embed method returns a valid thread.
+func TestGetInstagramPost_CDP_Fails_FallsBackToEmbed(t *testing.T) {
+	withZeroDelays(t)
+
+	// API call returns an HTML challenge body (starts with '<') -> doCDP fails
+	// with "HTML response from API", mirroring the prod failure mode.
+	apiBody := `{"status":200,"body":"<html><body>challenge/login wall</body></html>"}`
+
+	// Page fetch returns a valid embed page with a GraphVideo blob and
+	// video_url that getInstagramViaEmbed can parse.
+	embedHTML := `<html><body><script>{"shortcode_media":{"__typename":"GraphVideo","id":"123456","shortcode":"ABC123DEF","video_url":"https://cdninstagram.com/video.mp4"}}</script></body></html>`
+
+	ts := cdpFallbackServer(t, apiBody, embedHTML)
+	defer ts.Close()
+
+	cfg := Config{WowaURL: ts.URL, Session: "ig-cdp"}
+	c, err := NewClient(cfg)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	thread, err := c.GetInstagramPost(context.Background(), "ABC123DEF")
+	if err != nil {
+		t.Fatalf("GetInstagramPost: expected legacy fallback to succeed after CDP failure, got: %v", err)
+	}
+	if thread == nil || len(thread.Items) == 0 {
+		t.Fatal("expected a thread from legacy fallback")
+	}
+	if len(thread.Items[0].Videos) == 0 {
+		t.Error("expected video post from embed fallback")
+	}
+}
+
+// TestGetInstagramPost_CDP_Fails_AllMethodsFail_SurfacesCDPError proves that
+// when every method (CDP + proxy + embed + SSR) fails, the returned error
+// contains the underlying CDP error text -- not just a generic "CDP method
+// failed" wrapper.
+//
+// RED before fix: returned error is "GetInstagramPost: CDP method failed for
+// %s" -- the real CDP error is swallowed (Debug-logged only).
+// GREEN after fix: returned error includes the CDP cause (e.g. "HTML response
+// from API") so prod can diagnose the failure.
+func TestGetInstagramPost_CDP_Fails_AllMethodsFail_SurfacesCDPError(t *testing.T) {
+	withZeroDelays(t)
+
+	// API call returns an HTML challenge body -> doCDP fails.
+	apiBody := `{"status":200,"body":"<html>challenge/login wall</html>"}`
+
+	// Page fetch returns unparseable HTML (no GraphVideo, no media-id, no
+	// og:video) -> embed and SSR methods fail to extract any data.
+	pageHTML := `<html><body>nothing useful here</body></html>`
+
+	ts := cdpFallbackServer(t, apiBody, pageHTML)
+	defer ts.Close()
+
+	cfg := Config{WowaURL: ts.URL, Session: "ig-cdp"}
+	c, err := NewClient(cfg)
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+
+	_, err = c.GetInstagramPost(context.Background(), "ABC123DEF")
+	if err == nil {
+		t.Fatal("expected an error when all methods fail")
+	}
+	// The error must surface the underlying CDP cause, not just "CDP method
+	// failed".
+	if !strings.Contains(err.Error(), "HTML response from API") {
+		t.Errorf("error should contain the underlying CDP error text, got: %v", err)
+	}
+}
