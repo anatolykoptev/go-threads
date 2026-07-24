@@ -15,6 +15,8 @@ const (
 	errNotFound                 // 404
 	errServerError              // 5xx
 	errLoginRedirect            // 200 but body contains login redirect
+	errChallenge                // 200 with a small JSON challenge/login envelope
+	errLoginRequired            // pinned tab has no sessionid cookie (logged out)
 )
 
 // classifyHTTPStatus maps an HTTP status code to an error class.
@@ -69,6 +71,25 @@ func IsLoginRedirect(err error) bool {
 	var ae *APIError
 	if errors.As(err, &ae) {
 		return ae.Class == errLoginRedirect
+	}
+	return false
+}
+
+// IsChallenge returns true if the response was a challenge/login envelope
+// (200 with a small JSON body containing checkpoint_required, etc.).
+func IsChallenge(err error) bool {
+	var ae *APIError
+	if errors.As(err, &ae) {
+		return ae.Class == errChallenge
+	}
+	return false
+}
+
+// IsLoginRequired returns true if the pinned tab had no sessionid cookie.
+func IsLoginRequired(err error) bool {
+	var ae *APIError
+	if errors.As(err, &ae) {
+		return ae.Class == errLoginRequired
 	}
 	return false
 }

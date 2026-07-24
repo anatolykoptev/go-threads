@@ -12,6 +12,23 @@ import (
 	stealth "github.com/anatolykoptev/go-stealth"
 )
 
+// cdpInteractData returns the appropriate action data for a go-wowa interact
+// request. If the last action is a document.cookie evaluate (the P1-guard
+// session check), it returns a JSON-encoded cookie string with ds_user_id
+// present (simulating an authed tab). Otherwise it returns the provided
+// mockBody as-is.
+//
+// NOTE: the cookie string omits sessionid because Instagram's sessionid
+// cookie is HttpOnly and never visible to document.cookie. ds_user_id is the
+// readable auth indicator the guard checks.
+func cdpInteractData(req wowaInteractRequest, mockBody string) json.RawMessage {
+	if len(req.Actions) > 0 && strings.TrimSpace(req.Actions[len(req.Actions)-1].Script) == "document.cookie" {
+		b, _ := json.Marshal("ds_user_id=123; csrftoken=csrf; mid=mid")
+		return json.RawMessage(b)
+	}
+	return json.RawMessage(mockBody)
+}
+
 // cdpTestServer spins up a fake go-wowa that records the last interact request
 // and returns a scripted JSON response.
 func cdpTestServer(t *testing.T, wantPath string, body string) (*httptest.Server, *string, *string) {
@@ -38,7 +55,7 @@ func cdpTestServer(t *testing.T, wantPath string, body string) (*httptest.Server
 			URL:    req.URL,
 			Status: "ok",
 			Actions: []wowaActionResult{
-				{Action: "evaluate", Ok: true, Data: json.RawMessage(body)},
+				{Action: "evaluate", Ok: true, Data: cdpInteractData(req, body)},
 			},
 		}
 		w.Header().Set("Content-Type", "application/json")
@@ -409,6 +426,12 @@ func cdpFallbackServer(t *testing.T, apiBody string, pageHTML string) *httptest.
 				return
 			}
 			data = encoded
+		} else if len(req.Actions) > 0 && strings.TrimSpace(req.Actions[len(req.Actions)-1].Script) == "document.cookie" {
+			// P1-guard cookie check — return an authed cookie string.
+			// ds_user_id present (authed), sessionid omitted (HttpOnly, invisible
+			// to document.cookie).
+			b, _ := json.Marshal("ds_user_id=123; csrftoken=csrf; mid=mid")
+			data = json.RawMessage(b)
 		} else {
 			data = json.RawMessage(apiBody)
 		}

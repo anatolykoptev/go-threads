@@ -28,6 +28,7 @@ type Config struct {
 	WowaURL        string // e.g. http://go-wowa:8906
 	Session        string // go-wowa named session handle (default "threads-cdp")
 	InternalSecret string // sent as X-Internal-Secret on go-wowa requests
+	Proxy          string // optional residential proxy URL for the browser fetch (e.g. WEBSHARE_PROXY_URL)
 }
 
 func (c *Config) defaults() {

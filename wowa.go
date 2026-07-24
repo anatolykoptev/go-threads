@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -26,6 +27,7 @@ type wowaTransport struct {
 	hc     *http.Client
 	base   string
 	secret string
+	proxy  string // optional residential proxy URL sent on each interact request
 }
 
 func truncate(s string, n int) string {
@@ -35,11 +37,12 @@ func truncate(s string, n int) string {
 	return s[:n] + "..."
 }
 
-func newWowaTransport(base, secret string) *wowaTransport {
+func newWowaTransport(base, secret, proxy string) *wowaTransport {
 	return &wowaTransport{
 		hc:     &http.Client{Timeout: wowaInteractTimeout},
 		base:   strings.TrimRight(base, "/"),
 		secret: secret,
+		proxy:  proxy,
 	}
 }
 
@@ -56,6 +59,7 @@ type wowaInteractRequest struct {
 	Mode    string       `json:"mode"`
 	Session string       `json:"session"`
 	Actions []wowaAction `json:"actions"`
+	Proxy   *string      `json:"proxy,omitempty"` // residential proxy URL for the browser fetch
 }
 
 // wowaActionResult mirrors browser.ActionResult — only the fields doCDP reads.
@@ -89,6 +93,10 @@ func (w *wowaTransport) interact(ctx context.Context, session, pageURL string, a
 		Mode:    "default",
 		Session: session,
 		Actions: actions,
+	}
+	if w.proxy != "" {
+		p := w.proxy
+		body.Proxy = &p
 	}
 	payload, err := json.Marshal(body)
 	if err != nil {
@@ -236,6 +244,93 @@ func (c *Client) wowaFetchOnce(ctx context.Context, session, pageURL, script str
 	return fr, nil
 }
 
+// challengeSmallBodyLimit is the threshold below which a 200 JSON body is
+// probed for a challenge/login envelope. A real media/info response is always
+// larger; a challenge body is typically ~700 bytes.
+const challengeSmallBodyLimit = 4096
+
+// challengeSignals are the IG challenge/login error strings instaloader/instagrapi
+// check for (instaloader PR #2612, instagrapi mixins/challenge.py).
+var challengeSignals = []string{
+	"checkpoint_required",
+	"feedback_required",
+	"challenge_required",
+	"login_required",
+}
+
+// detectChallenge inspects a small 200 JSON body for a challenge/login envelope.
+// Returns a non-empty reason string if the body is a challenge, "" if it looks
+// like a valid response. Borrowed from instaloader PR #2612 + instagrapi
+// mixins/challenge.py.
+//
+// Detection logic:
+//  1. message/status contains a known challenge signal → challenge
+//  2. require_login or spam flag set → challenge
+//  3. status is "fail"/"error" AND body has no items/shortcode_media → challenge
+//
+// A valid small response like {"status":"ok"} (like/unlike ack) is NOT flagged.
+func detectChallenge(body string) string {
+	var env struct {
+		Message      string `json:"message"`
+		Status       string `json:"status"`
+		RequireLogin bool   `json:"require_login"`
+		Spam         bool   `json:"spam"`
+	}
+	if err := json.Unmarshal([]byte(body), &env); err != nil {
+		return "" // not valid JSON — not a challenge envelope
+	}
+	combined := env.Message + " " + env.Status
+	for _, sig := range challengeSignals {
+		if strings.Contains(combined, sig) {
+			return sig
+		}
+	}
+	if env.RequireLogin {
+		return "require_login"
+	}
+	if env.Spam {
+		return "spam"
+	}
+	// Generic error envelope without a valid media payload.
+	if (env.Status == "fail" || env.Status == "error") &&
+		!strings.Contains(body, "\"items\"") &&
+		!strings.Contains(body, "\"shortcode_media\"") {
+		return "error envelope: " + truncate(env.Message+" "+env.Status, 120)
+	}
+	return ""
+}
+
+// checkSessionCookie evaluates document.cookie in the pinned tab and verifies
+// that a ds_user_id= cookie is present. If absent, the tab is logged out and
+// any media fetch would hit a login wall — fail fast with ErrLoginRequired
+// instead of wasting the fetch. Borrowed from the browser-evaluate-transport
+// skill (LinkedIn Voyager session check pattern).
+//
+// WHY ds_user_id and NOT sessionid: Instagram's sessionid cookie is HttpOnly,
+// so it is NEVER visible to document.cookie / JS — checking for it would
+// return errLoginRequired on every call, even when the tab is authenticated.
+// ds_user_id is the readable (non-HttpOnly) cookie that Instagram sets to the
+// logged-in account's user id; it is present iff the tab is authenticated and
+// absent when logged out (verified live on a logged-in cloakbrowser profile).
+func (c *Client) checkSessionCookie(ctx context.Context, session, pageURL string) error {
+	res, err := c.wowa.interact(ctx, session, pageURL, []wowaAction{
+		{Type: "evaluate", Script: "document.cookie"},
+	})
+	if err != nil {
+		return fmt.Errorf("go-wowa cookie check: %w", err)
+	}
+	var cookies string
+	if err := json.Unmarshal(res, &cookies); err != nil {
+		return fmt.Errorf("unmarshal cookie result: %w", err)
+	}
+	if !strings.Contains(cookies, "ds_user_id=") {
+		slog.Warn("instagram: CDP session not authenticated (no ds_user_id cookie)",
+			slog.String("session", session))
+		return &APIError{Status: 200, Class: errLoginRequired, Message: "no ds_user_id cookie in pinned tab"}
+	}
+	return nil
+}
+
 // doCDP routes a private API call through go-wowa's evaluate seam as an
 // in-page fetch from a www.instagram.com tab. It targets the web API endpoints
 // confirmed in PART 1; the mobile i.instagram.com path is left untouched when
@@ -243,6 +338,16 @@ func (c *Client) wowaFetchOnce(ctx context.Context, session, pageURL, script str
 func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form url.Values) ([]byte, error) {
 	webURL, appID, body, err := c.buildWebRequest(endpoint, method, path, form)
 	if err != nil {
+		return nil, fmt.Errorf("%s: %w", endpoint, err)
+	}
+
+	pageURL := igWebBaseURL + "/"
+
+	// P1-guard: verify the pinned tab is authenticated before issuing the
+	// media fetch. A logged-out tab returns a login-wall JSON (~700 bytes)
+	// that would otherwise be silently misclassified as a successful (but
+	// empty) media response.
+	if err := c.checkSessionCookie(ctx, c.cfg.Session, pageURL); err != nil {
 		return nil, fmt.Errorf("%s: %w", endpoint, err)
 	}
 
@@ -256,7 +361,6 @@ func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form 
 		return nil, fmt.Errorf("%s: build fetch script: %w", endpoint, err)
 	}
 
-	pageURL := igWebBaseURL + "/"
 	fr, err := c.wowaFetchOnce(ctx, c.cfg.Session, pageURL, js)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", endpoint, err)
@@ -268,6 +372,22 @@ func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form 
 	if fr.Status == 200 && len(fr.Body) > 0 && fr.Body[0] == '<' {
 		return nil, fmt.Errorf("%s: HTML response from API", endpoint)
 	}
+
+	// P0: detect a 200 small-body challenge/login envelope. Without this, a
+	// ~718-byte challenge body passes as success → parseInstagramPost gets a
+	// stub → silent partial-data degradation. Borrowed from instaloader PR
+	// #2612 + instagrapi mixins/challenge.py.
+	if fr.Status == 200 && len(fr.Body) > 0 && len(fr.Body) < challengeSmallBodyLimit {
+		if reason := detectChallenge(fr.Body); reason != "" {
+			slog.Warn("instagram: CDP challenge/small-body",
+				slog.String("endpoint", endpoint),
+				slog.Int("status", fr.Status),
+				slog.Int("len", len(fr.Body)),
+				slog.String("body", fr.Body))
+			return nil, &APIError{Status: 200, Class: errChallenge, Message: reason}
+		}
+	}
+
 	if fr.Status != 200 {
 		return nil, &APIError{Status: fr.Status, Class: classifyHTTPStatus(fr.Status), Message: fmt.Sprintf("HTTP %d", fr.Status)}
 	}
