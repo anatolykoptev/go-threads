@@ -3,6 +3,7 @@ package threads
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -64,6 +65,25 @@ type rawVideoVersion struct {
 type flexBool bool
 
 // UnmarshalJSON accepts true/false, 0/1 (and numeric strings as a hedge).
+// On any value it does not recognise it defaults to false and returns NO
+// error — a single malformed boolean-ish field on one carousel slide must
+// not be able to abort the whole items[] / carousel_media[] unmarshal (the
+// v0.7.0 is_dash_eligible incident, #43, where one bad field killed the
+// entire authed CDP rung). Tolerate-and-default is the safe direction.
+//
+// The default branch also emits a WARN through log/slog carrying the raw
+// value it could not interpret. Silent degradation is exactly the failure
+// class that cost us 2026-07-24: is_dash_eligible typed bool, Instagram
+// shipped 1, the strict decode aborted the whole post, the authed CDP rung
+// failed on every request, and nothing in the logs said so. With
+// tolerate-and-default alone the next unrecognised shape ("yes", 2, an
+// object) would just become false and DASH would quietly turn off — same
+// silent degradation, new mechanism. The WARN makes the unrecognised shape
+// visible in the journal so it can be grepped and alerted on, without
+// changing the tolerate-and-continue behaviour. The raw value is
+// defensively truncated so a hostile or huge payload cannot flood the log.
+// No logger is added to any struct and no signature changes — this stays a
+// drop-in on the unmarshaler, using the package-level slog default.
 func (f *flexBool) UnmarshalJSON(data []byte) error {
 	s := strings.TrimSpace(string(data))
 	switch s {
@@ -72,9 +92,23 @@ func (f *flexBool) UnmarshalJSON(data []byte) error {
 	case "false", "0", `"0"`, "null":
 		*f = false
 	default:
-		return fmt.Errorf("flexBool: invalid value %q", s)
+		*f = false
+		slog.Warn("threads.flexBool: unrecognised value, defaulting to false",
+			slog.String("value", truncateRawValue(s)))
 	}
 	return nil
+}
+
+// truncateRawValue bounds the raw literal carried in the WARN so a hostile
+// or huge payload cannot flood the log. The cap is generous enough to keep
+// the offending shape legible (a stray object, a long string) but small
+// enough that a multi-KB blob is reduced to a grep-friendly stub.
+func truncateRawValue(s string) string {
+	const max = 512
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "...(truncated)"
 }
 
 type rawPost struct {
@@ -122,9 +156,12 @@ type rawImageSet struct {
 }
 
 type rawCarouselItem struct {
-	MediaType      int               `json:"media_type"`
-	ImageVersions2 *rawImageSet      `json:"image_versions2"`
-	VideoVersions  []rawVideoVersion `json:"video_versions"`
+	MediaType         int               `json:"media_type"`
+	ImageVersions2    *rawImageSet      `json:"image_versions2"`
+	VideoVersions     []rawVideoVersion `json:"video_versions"`
+	VideoDashManifest string            `json:"video_dash_manifest,omitempty"`
+	NumberOfQualities int               `json:"number_of_qualities,omitempty"`
+	IsDashEligible    flexBool          `json:"is_dash_eligible,omitempty"`
 }
 
 type rawThreadItem struct {
@@ -534,7 +571,65 @@ func convertPost(rp rawPost) Post {
 		}
 	}
 
+	p.CarouselItems = buildCarouselItems(rp)
+
 	return p
+}
+
+// buildCarouselItems produces the ordered, structured slide list for a post.
+//
+// For a carousel (carousel_media non-empty) it maps each carousel_media[]
+// entry to one CarouselItem in slide order, carrying the slide's own
+// media_type, its image candidates, its video versions, and — for video
+// slides — the per-slide DASH manifest fields.
+//
+// For a single-media post (no carousel_media but image_versions2 or
+// video_versions present) it SYNTHESISES a one-item CarouselItem carrying
+// the post's own media + DASH fields, so a consumer has ONE code path
+// (range CarouselItems) regardless of whether the post is a carousel or a
+// single photo/video. MediaType on the synthesised item is the post's own
+// media_type (1 or 2), preserving the original type.
+//
+// For a non-media / text-only post it returns a non-nil empty slice so
+// consumers can range over it unconditionally without a nil-panic.
+//
+// Post.Images / Post.Videos are populated separately and unchanged; this
+// function is purely additive.
+func buildCarouselItems(rp rawPost) []CarouselItem {
+	switch {
+	case len(rp.CarouselMedia) > 0:
+		items := make([]CarouselItem, 0, len(rp.CarouselMedia))
+		for _, ci := range rp.CarouselMedia {
+			items = append(items, carouselItemFromRaw(ci.MediaType, ci.ImageVersions2, ci.VideoVersions,
+				ci.VideoDashManifest, ci.NumberOfQualities, bool(ci.IsDashEligible)))
+		}
+		return items
+	case rp.ImageVersions2 != nil || len(rp.VideoVersions) > 0:
+		return []CarouselItem{carouselItemFromRaw(rp.MediaType, rp.ImageVersions2, rp.VideoVersions,
+			rp.VideoDashManifest, rp.NumberOfQualities, bool(rp.IsDashEligible))}
+	default:
+		return []CarouselItem{}
+	}
+}
+
+// carouselItemFromRaw fills a CarouselItem from the raw media fields. It does
+// NOT flatten candidates across slides — each item carries only its own.
+func carouselItemFromRaw(mediaType int, iv *rawImageSet, vv []rawVideoVersion, dashManifest string, nQual int, dashElig bool) CarouselItem {
+	item := CarouselItem{
+		MediaType:         mediaType,
+		VideoDashManifest: dashManifest,
+		NumberOfQualities: nQual,
+		IsDashEligible:    dashElig,
+	}
+	if iv != nil {
+		for _, img := range iv.Candidates {
+			item.Images = append(item.Images, MediaVersion{URL: img.URL, Width: img.Width, Height: img.Height})
+		}
+	}
+	for _, vid := range vv {
+		item.Videos = append(item.Videos, MediaVersion{URL: vid.URL, Width: vid.Width, Height: vid.Height})
+	}
+	return item
 }
 
 // --- Private API parsers ---
