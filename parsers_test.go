@@ -507,6 +507,118 @@ func TestParseInstagramPostNoDashManifest(t *testing.T) {
 	}
 }
 
+// TestParseInstagramPostDashEligibleNumeric reproduces the v0.7.0 production
+// regression: Instagram ships is_dash_eligible as a numeric 0/1, not a JSON
+// bool. The v0.7.0 rawPost declared it bool, so the ENTIRE items[] response
+// failed to unmarshal (json: cannot unmarshal number into Go struct field
+// rawPost.items.is_dash_eligible of type bool), killing the authed CDP rung
+// and silently degrading to the public embed rung — losing both the 1080p
+// DASH manifest and all engagement metrics. This feeds the numeric form
+// through the REAL parseInstagramPost entry point (not convertPost directly).
+func TestParseInstagramPostDashEligibleNumeric(t *testing.T) {
+	cases := []struct {
+		name   string
+		json   string
+		wantOK bool
+	}{
+		{"numeric 1", `"is_dash_eligible": 1`, true},
+		{"numeric 0", `"is_dash_eligible": 0`, false},
+		{"bool true", `"is_dash_eligible": true`, true},
+		{"bool false", `"is_dash_eligible": false`, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			body := []byte(`{
+				"items": [
+					{
+						"pk": "3727980973477364718",
+						"code": "DO8cvGViIPu",
+						"user": {"pk": "1513490980", "username": "alnassr", "full_name": "Al Nassr", "is_verified": true},
+						"caption": {"text": "Goal!"},
+						"taken_at": 1758630037,
+						"media_type": 2,
+						"like_count": 2244564,
+						"play_count": 56964765,
+						"video_versions": [{"url": "https://example.com/vid.mp4", "width": 720, "height": 1280, "type": 101}],
+						` + tc.json + `
+					}
+				]
+			}`)
+
+			post, err := parseInstagramPost(body)
+			if err != nil {
+				t.Fatalf("parseInstagramPost: %v", err)
+			}
+			if post.IsDashEligible != tc.wantOK {
+				t.Errorf("IsDashEligible = %v, want %v", post.IsDashEligible, tc.wantOK)
+			}
+		})
+	}
+}
+
+// TestParseInstagramPostNumericDashEligiblePreservesOtherFields is the
+// regression test for the actual production symptom: with the numeric
+// is_dash_eligible, the WHOLE response used to die, so author, video
+// versions, and engagement counts were all lost. After the fix the post
+// must parse and carry every non-DASH field exactly as before.
+func TestParseInstagramPostNumericDashEligiblePreservesOtherFields(t *testing.T) {
+	body := []byte(`{
+		"items": [
+			{
+				"pk": "3727980973477364718",
+				"code": "DO8cvGViIPu",
+				"user": {"pk": "1513490980", "username": "alnassr", "full_name": "Al Nassr", "is_verified": true},
+				"caption": {"text": "Goal!"},
+				"taken_at": 1758630037,
+				"media_type": 2,
+				"like_count": 2244564,
+				"play_count": 56964765,
+				"ig_play_count": 56000000,
+				"comment_count": 12345,
+				"media_repost_count": 678,
+				"video_versions": [{"url": "https://example.com/vid.mp4", "width": 720, "height": 1280, "type": 101}],
+				"number_of_qualities": 9,
+				"is_dash_eligible": 1
+			}
+		]
+	}`)
+
+	post, err := parseInstagramPost(body)
+	if err != nil {
+		t.Fatalf("parseInstagramPost: %v", err)
+	}
+	if post.Code != "DO8cvGViIPu" {
+		t.Errorf("Code = %q, want DO8cvGViIPu", post.Code)
+	}
+	if post.Author.Username != "alnassr" {
+		t.Errorf("Author.Username = %q, want alnassr", post.Author.Username)
+	}
+	if post.LikeCount != 2244564 {
+		t.Errorf("LikeCount = %d, want 2244564", post.LikeCount)
+	}
+	if post.ViewCount != 56964765 {
+		t.Errorf("ViewCount = %d, want 56964765", post.ViewCount)
+	}
+	if post.IGPlayCount != 56000000 {
+		t.Errorf("IGPlayCount = %d, want 56000000", post.IGPlayCount)
+	}
+	if post.CommentCount != 12345 {
+		t.Errorf("CommentCount = %d, want 12345", post.CommentCount)
+	}
+	if post.RepostCount != 678 {
+		t.Errorf("RepostCount = %d, want 678", post.RepostCount)
+	}
+	if len(post.Videos) != 1 || post.Videos[0].Width != 720 {
+		t.Errorf("Videos = %+v, want one 720-wide entry", post.Videos)
+	}
+	if post.NumberOfQualities != 9 {
+		t.Errorf("NumberOfQualities = %d, want 9", post.NumberOfQualities)
+	}
+	if !post.IsDashEligible {
+		t.Errorf("IsDashEligible = false, want true (numeric 1)")
+	}
+}
+
 func TestParseBioLinksEmpty(t *testing.T) {
 	html := []byte(`
 		<html><script>"result":{"data":{"user":{"pk":"123","username":"nolinks","full_name":"No Links","biography":"Hello","bio_links":[],"profile_pic_url":"https://example.com/pic.jpg","is_verified":false,"text_post_app_is_private":false,"follower_count":10,"following_count":5}},"sequence_number":0}</script>
