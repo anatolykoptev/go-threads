@@ -3,6 +3,7 @@ package threads
 import (
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 )
@@ -69,6 +70,20 @@ type flexBool bool
 // not be able to abort the whole items[] / carousel_media[] unmarshal (the
 // v0.7.0 is_dash_eligible incident, #43, where one bad field killed the
 // entire authed CDP rung). Tolerate-and-default is the safe direction.
+//
+// The default branch also emits a WARN through log/slog carrying the raw
+// value it could not interpret. Silent degradation is exactly the failure
+// class that cost us 2026-07-24: is_dash_eligible typed bool, Instagram
+// shipped 1, the strict decode aborted the whole post, the authed CDP rung
+// failed on every request, and nothing in the logs said so. With
+// tolerate-and-default alone the next unrecognised shape ("yes", 2, an
+// object) would just become false and DASH would quietly turn off — same
+// silent degradation, new mechanism. The WARN makes the unrecognised shape
+// visible in the journal so it can be grepped and alerted on, without
+// changing the tolerate-and-continue behaviour. The raw value is
+// defensively truncated so a hostile or huge payload cannot flood the log.
+// No logger is added to any struct and no signature changes — this stays a
+// drop-in on the unmarshaler, using the package-level slog default.
 func (f *flexBool) UnmarshalJSON(data []byte) error {
 	s := strings.TrimSpace(string(data))
 	switch s {
@@ -78,8 +93,22 @@ func (f *flexBool) UnmarshalJSON(data []byte) error {
 		*f = false
 	default:
 		*f = false
+		slog.Warn("threads.flexBool: unrecognised value, defaulting to false",
+			slog.String("value", truncateRawValue(s)))
 	}
 	return nil
+}
+
+// truncateRawValue bounds the raw literal carried in the WARN so a hostile
+// or huge payload cannot flood the log. The cap is generous enough to keep
+// the offending shape legible (a stray object, a long string) but small
+// enough that a multi-KB blob is reduced to a grep-friendly stub.
+func truncateRawValue(s string) string {
+	const max = 512
+	if len(s) <= max {
+		return s
+	}
+	return s[:max] + "...(truncated)"
 }
 
 type rawPost struct {
