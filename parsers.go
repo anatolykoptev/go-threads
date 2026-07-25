@@ -50,6 +50,33 @@ type rawVideoVersion struct {
 	Type   int    `json:"type"`
 }
 
+// flexBool is a bool that tolerates BOTH JSON encodings Instagram has shipped
+// for flag fields: a real JSON boolean (true/false) AND a numeric 0/1. The
+// authed /api/v1/media/<id>/info/ response delivers is_dash_eligible as a
+// number (measured live: 1 for DO8cvGViIPu and DbISO9DIqoZ), while older
+// responses and other flag fields use real booleans. Declaring the field as
+// plain bool breaks the ENTIRE items[] unmarshal when the numeric form
+// arrives (json: cannot unmarshal number into Go struct field ... of type
+// bool), killing the authed CDP rung; declaring it int would just move the
+// breakage to the boolean form. flexBool accepts both and exposes a plain
+// bool, so the PUBLIC Post.IsDashEligible stays bool and consumers are
+// unaffected.
+type flexBool bool
+
+// UnmarshalJSON accepts true/false, 0/1 (and numeric strings as a hedge).
+func (f *flexBool) UnmarshalJSON(data []byte) error {
+	s := strings.TrimSpace(string(data))
+	switch s {
+	case "true", "1", `"1"`:
+		*f = true
+	case "false", "0", `"0"`, "null":
+		*f = false
+	default:
+		return fmt.Errorf("flexBool: invalid value %q", s)
+	}
+	return nil
+}
+
 type rawPost struct {
 	Pk      json.Number `json:"pk"`
 	Code    string      `json:"code"`
@@ -80,9 +107,9 @@ type rawPost struct {
 	// reels whose video_versions are all capped at 720x1280. Carried as a raw
 	// XML STRING — go-threads owns the response shape, go-media owns MPD
 	// parsing/selection/muxing. Absent on embed/SSR/proxy fallback rungs.
-	VideoDashManifest string `json:"video_dash_manifest,omitempty"`
-	NumberOfQualities int    `json:"number_of_qualities,omitempty"`
-	IsDashEligible    bool   `json:"is_dash_eligible,omitempty"`
+	VideoDashManifest string   `json:"video_dash_manifest,omitempty"`
+	NumberOfQualities int      `json:"number_of_qualities,omitempty"`
+	IsDashEligible    flexBool `json:"is_dash_eligible,omitempty"`
 }
 
 type rawTextPostInfo struct {
@@ -470,7 +497,7 @@ func convertPost(rp rawPost) Post {
 		RepostCount:       rp.RepostCount,
 		VideoDashManifest: rp.VideoDashManifest,
 		NumberOfQualities: rp.NumberOfQualities,
-		IsDashEligible:    rp.IsDashEligible,
+		IsDashEligible:    bool(rp.IsDashEligible),
 	}
 
 	if rp.Caption != nil {
