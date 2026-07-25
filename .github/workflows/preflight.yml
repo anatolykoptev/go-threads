@@ -1,0 +1,44 @@
+name: preflight
+
+# Pre-merge build/test gate. go-threads is a PUBLIC repo → free GitHub-hosted
+# arm64 runners (ubuntu-24.04-arm: free unlimited for public repos, arm64 =
+# prod-box parity). Gate = `make preflight` (gofmt + vet + build + test).
+#
+# GOWORK=off is set workflow-wide for determinism: a fresh CI clone has no
+# go.work, so it is a no-op there, but it guarantees the build never depends on
+# a developer's stray parent workspace. The Makefile also sets GOWORK=off
+# per-command, so local `make preflight` is hermetic regardless.
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+concurrency:
+  group: preflight-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GOWORK: "off"
+
+jobs:
+  preflight:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          # Fleet policy: CI runs the latest patched toolchain (go.mod is the
+          # minimum, not the pin). govulncheck gates on stdlib CVEs fixed in
+          # patch releases — pinning go.mod's version fails the gate the day
+          # a stdlib CVE lands.
+          go-version: stable
+
+      - name: make preflight
+        run: make preflight
