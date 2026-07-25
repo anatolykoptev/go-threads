@@ -1,0 +1,258 @@
+{
+  "items": [
+    {
+      "pk": "3557315634439613295",
+      "id": "3557315634439613295_30523925603",
+      "code": "DFeH7jYt2tv",
+      "taken_at": 1738285091,
+      "media_type": 8,
+      "like_count": 7884,
+      "comment_count": 508,
+      "media_repost_count": null,
+      "user": {
+        "pk": "30523925603",
+        "username": "thelucasokeefe",
+        "full_name": "Lucas O\u2019Keefe | Social Media Marketing",
+        "is_verified": true
+      },
+      "caption": {
+        "strong_id__": "17893450629149873",
+        "bit_flags": 0,
+        "created_at": 1738285092,
+        "created_at_utc": 1738285092,
+        "did_report_as_spam": false,
+        "is_ranked_comment": false,
+        "pk": "17893450629149873",
+        "share_enabled": false,
+        "content_type": "comment",
+        "media_id": "3557315634439613295",
+        "status": "Active",
+        "type": 1,
+        "user_id": "30523925603",
+        "text": "Have you heard all the buzz about carousel posts?\n\nA carousel is any photo post that has more than 1 slide/photo (like this post you\u2019re reading). They\u2019re my favourite content format and Instagram has been showing them to audiences again lately!\n\n(If your audience is used to seeing this post from you that is. If you grew your audience from Reels you\u2019ll likely see better results with them).\n\nBut regardless of reach, carousels are a great way to pack a lot of info into a single post.\n\nTry the S.W.I.P.E. Method\u2014a simple but powerful framework to structure engaging carousels that boost reach and engagement.\n\n\ud83d\udd39 S - Strong Hook \u2192 Start with a bold question, statement, or problem.\n\n\ud83d\udd39 W - Why It Matters \u2192 Explain why your audience should care.\n\n\ud83d\udd39 I - Inform \u2192 Share valuable insights in a clear, digestible way.\n\n\ud83d\udd39 P - Provide a Summary \u2192 Reinforce key takeaways from your post.\n\n\ud83d\udd39 E - End with a CTA \u2192 Tell your audience exactly what to do next!\n\n\ud83d\udca1 Why this works:\n\u2714 Helps keep your carousels structured & easy to follow.\n\u2714 Increases engagement by keeping people swiping.\n\u2714 Makes creating carousels simple & repeatable.\n\nShare this post as your go-to carousel formula and comment \u201cswipe\u201d if you want a free worksheet to try the S.W.I.P.E. Method in your next post!\n\n#contentideas\u00a0#socialmediatips\u00a0#contentstrategytips\u00a0#personalbrand\u00a0#businesscontent\u00a0#instagramtipsforbusiness\u00a0#storyideas\u00a0#carousel\u00a0#carousels\u00a0#instagram101",
+        "user": {
+          "strong_id__": "30523925603",
+          "pk": "30523925603",
+          "pk_id": "30523925603",
+          "id": "30523925603",
+          "is_unpublished": false,
+          "fbid_v2": "17841430648095490",
+          "username": "thelucasokeefe",
+          "full_name": "Lucas O\u2019Keefe | Social Media Marketing",
+          "is_private": false,
+          "is_verified": true,
+          "profile_pic_id": "3942121708920048432_30523925603",
+          "profile_pic_url": "https://scontent-sjc6-1.cdninstagram.com/v/t51.82787-19/746893025_18107007977021604_8715143256057564327_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-sjc6-1.cdninstagram.com&_nc_cat=100&_nc_oc=Q6cZ2gH7VBYzcaPvOLKvFy8_mYzsZpwU6Mebxvc9KcK_ueAXZ2kuSY7u89lE0RsfVnxXOg0&_nc_ohc=do9MOAGwb_wQ7kNvwFCnTjH&_nc_gid=qpKv3KK9pe3NlMw7PiJcRg&edm=ALQROFkBAAAA&ccb=7-5&oh=00_AQBNk-gcyFVqaqzdimWrLTYfsGOWYl5bJ711XQOArSPvGQ&oe=6A6A2BA8&_nc_sid=fc8dfb"
+        },
+        "is_covered": false,
+        "private_reply_status": 0
+      },
+      "carousel_media": [
+        {
+          "media_type": 1,
+          "pk": "3557315621168757298",
+          "taken_at": 1738285089,
+          "image_versions2": {
+            "candidates": [
+              {
+                "url": "https://example.com/img0.jpg",
+                "width": 1080,
+                "height": 1350
+              },
+              {
+                "url": "https://example.com/img0.jpg",
+                "width": 480,
+                "height": 600
+              }
+            ]
+          }
+        },
+        {
+          "media_type": 1,
+          "pk": "3557315621261061820",
+          "taken_at": 1738285089,
+          "image_versions2": {
+            "candidates": [
+              {
+                "url": "https://example.com/img1.jpg",
+                "width": 1080,
+                "height": 1350
+              },
+              {
+                "url": "https://example.com/img1.jpg",
+                "width": 480,
+                "height": 600
+              }
+            ]
+          }
+        },
+        {
+          "media_type": 1,
+          "pk": "3557315621286261570",
+          "taken_at": 1738285089,
+          "image_versions2": {
+            "candidates": [
+              {
+                "url": "https://example.com/img2.jpg",
+                "width": 1080,
+                "height": 1350
+              },
+              {
+                "url": "https://example.com/img2.jpg",
+                "width": 480,
+                "height": 600
+              }
+            ]
+          }
+        },
+        {
+          "media_type": 1,
+          "pk": "3557315621168753015",
+          "taken_at": 1738285089,
+          "image_versions2": {
+            "candidates": [
+              {
+                "url": "https://example.com/img3.jpg",
+                "width": 1080,
+                "height": 1350
+              },
+              {
+                "url": "https://example.com/img3.jpg",
+                "width": 480,
+                "height": 600
+              }
+            ]
+          }
+        },
+        {
+          "media_type": 1,
+          "pk": "3557315621328244050",
+          "taken_at": 1738285089,
+          "image_versions2": {
+            "candidates": [
+              {
+                "url": "https://example.com/img4.jpg",
+                "width": 1080,
+                "height": 1350
+              },
+              {
+                "url": "https://example.com/img4.jpg",
+                "width": 480,
+                "height": 600
+              }
+            ]
+          }
+        },
+        {
+          "media_type": 1,
+          "pk": "3557315621177028748",
+          "taken_at": 1738285089,
+          "image_versions2": {
+            "candidates": [
+              {
+                "url": "https://example.com/img5.jpg",
+                "width": 1080,
+                "height": 1350
+              },
+              {
+                "url": "https://example.com/img5.jpg",
+                "width": 480,
+                "height": 600
+              }
+            ]
+          }
+        },
+        {
+          "media_type": 1,
+          "pk": "3557315621286188585",
+          "taken_at": 1738285089,
+          "image_versions2": {
+            "candidates": [
+              {
+                "url": "https://example.com/img6.jpg",
+                "width": 1080,
+                "height": 1350
+              },
+              {
+                "url": "https://example.com/img6.jpg",
+                "width": 480,
+                "height": 600
+              }
+            ]
+          }
+        },
+        {
+          "media_type": 1,
+          "pk": "3557315621177237412",
+          "taken_at": 1738285089,
+          "image_versions2": {
+            "candidates": [
+              {
+                "url": "https://example.com/img7.jpg",
+                "width": 1080,
+                "height": 1350
+              },
+              {
+                "url": "https://example.com/img7.jpg",
+                "width": 480,
+                "height": 600
+              }
+            ]
+          }
+        },
+        {
+          "media_type": 1,
+          "pk": "3557315621168815906",
+          "taken_at": 1738285089,
+          "image_versions2": {
+            "candidates": [
+              {
+                "url": "https://example.com/img8.jpg",
+                "width": 1080,
+                "height": 1350
+              },
+              {
+                "url": "https://example.com/img8.jpg",
+                "width": 480,
+                "height": 600
+              }
+            ]
+          }
+        },
+        {
+          "media_type": 1,
+          "pk": "3557315621428860134",
+          "taken_at": 1738285089,
+          "image_versions2": {
+            "candidates": [
+              {
+                "url": "https://example.com/img9.jpg",
+                "width": 1080,
+                "height": 1350
+              },
+              {
+                "url": "https://example.com/img9.jpg",
+                "width": 480,
+                "height": 600
+              }
+            ]
+          }
+        }
+      ],
+      "image_versions2": {
+        "candidates": [
+          {
+            "url": "https://example.com/img0.jpg",
+            "width": 1080,
+            "height": 1350
+          },
+          {
+            "url": "https://example.com/img0.jpg",
+            "width": 480,
+            "height": 600
+          }
+        ]
+      }
+    }
+  ]
+}
