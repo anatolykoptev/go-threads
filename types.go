@@ -56,6 +56,14 @@ type Post struct {
 	IsReply      bool
 	Images       []MediaVersion
 	Videos       []MediaVersion
+	// DASH manifest — present only on the authed CDP/REST media-info path.
+	// VideoDashManifest is the raw MPD XML string (the only source of
+	// higher-than-720p renditions for capped reels). NumberOfQualities and
+	// IsDashEligible are carried verbatim. Empty/zero on embed/SSR/proxy
+	// fallback rungs. go-threads carries the string; go-media parses/muxes.
+	VideoDashManifest string
+	NumberOfQualities int
+	IsDashEligible    bool
 }
 
 // MediaVersion represents a single media rendition.

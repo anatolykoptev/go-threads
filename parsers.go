@@ -74,6 +74,15 @@ type rawPost struct {
 	ImageVersions2  *rawImageSet      `json:"image_versions2"`
 	VideoVersions   []rawVideoVersion `json:"video_versions"`
 	CarouselMedia   []rawCarouselItem `json:"carousel_media"`
+	// DASH manifest fields — present only on the authed CDP/REST
+	// /api/v1/media/<id>/info/ response (x-ig-app-id: 936619743392459). The
+	// manifest is the ONLY place higher-than-720p video is available for
+	// reels whose video_versions are all capped at 720x1280. Carried as a raw
+	// XML STRING — go-threads owns the response shape, go-media owns MPD
+	// parsing/selection/muxing. Absent on embed/SSR/proxy fallback rungs.
+	VideoDashManifest string `json:"video_dash_manifest,omitempty"`
+	NumberOfQualities int    `json:"number_of_qualities,omitempty"`
+	IsDashEligible    bool   `json:"is_dash_eligible,omitempty"`
 }
 
 type rawTextPostInfo struct {
@@ -450,15 +459,18 @@ func convertUser(ru rawUser) *ThreadsUser {
 
 func convertPost(rp rawPost) Post {
 	p := Post{
-		ID:           rp.Pk.String(),
-		Code:         rp.Code,
-		Author:       *convertUser(rp.User),
-		MediaType:    rp.MediaType,
-		LikeCount:    rp.LikeCount,
-		ViewCount:    rp.ViewCount,
-		IGPlayCount:  rp.IGPlayCount,
-		CommentCount: rp.CommentCount,
-		RepostCount:  rp.RepostCount,
+		ID:                rp.Pk.String(),
+		Code:              rp.Code,
+		Author:            *convertUser(rp.User),
+		MediaType:         rp.MediaType,
+		LikeCount:         rp.LikeCount,
+		ViewCount:         rp.ViewCount,
+		IGPlayCount:       rp.IGPlayCount,
+		CommentCount:      rp.CommentCount,
+		RepostCount:       rp.RepostCount,
+		VideoDashManifest: rp.VideoDashManifest,
+		NumberOfQualities: rp.NumberOfQualities,
+		IsDashEligible:    rp.IsDashEligible,
 	}
 
 	if rp.Caption != nil {

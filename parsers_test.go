@@ -1,6 +1,7 @@
 package threads
 
 import (
+	"encoding/json"
 	"testing"
 	"time"
 )
@@ -408,6 +409,101 @@ func TestParseInstagramPostMissingOptionalCounts(t *testing.T) {
 	}
 	if post.RepostCount != 0 {
 		t.Errorf("RepostCount = %d, want 0 (key absent)", post.RepostCount)
+	}
+}
+
+func TestParseInstagramPostDashManifest(t *testing.T) {
+	// Fixture mirrors the REAL items[0] shape returned by the authed IG
+	// /api/v1/media/<id>/info/ endpoint (x-ig-app-id: 936619743392459) for a
+	// reel where every video_versions entry is capped at 720x1280 but the
+	// DASH MPD carries up to 1080p. The manifest is a raw XML STRING (~17.7 KB
+	// on the live sample); here it is trimmed to a structurally faithful MPD
+	// skeleton. number_of_qualities and is_dash_eligible are carried verbatim.
+	// go-threads owns the response SHAPE only; go-media owns MPD parsing/muxing.
+	const mpd = `<?xml version="1.0"?>
+<MPD xmlns="urn:mpeg:dash:schema:mpd:2011" type="static" mediaPresentationDuration="PT12.34S">
+  <Period>
+    <AdaptationSet mimeType="video/mp4" maxWidth="1080" maxHeight="1920">
+      <Representation id="0" bandwidth="501000" width="270" height="480" frameRate="30"/>
+      <Representation id="1" bandwidth="2301000" width="540" height="960" frameRate="30"/>
+      <Representation id="2" bandwidth="2301000" width="1080" height="1920" frameRate="30"/>
+    </AdaptationSet>
+    <AdaptationSet mimeType="audio/mp4">
+      <Representation id="3" bandwidth="128000"/>
+    </AdaptationSet>
+  </Period>
+</MPD>`
+	// Build the response via json.Marshal so the manifest (newlines, quotes)
+	// is escaped exactly as the live transport delivers it.
+	item := map[string]any{
+		"pk":         "3727980973477364718",
+		"code":       "DO8cvGViIPu",
+		"user":       map[string]any{"pk": "1513490980", "username": "alnassr", "full_name": "Al Nassr", "is_verified": true},
+		"caption":    map[string]any{"text": "Goal!"},
+		"taken_at":   1758630037,
+		"media_type": 2,
+		"like_count": 2244564,
+		"play_count": 56964765,
+		"video_versions": []map[string]any{
+			{"url": "https://example.com/vid.mp4", "width": 720, "height": 1280, "type": 101},
+		},
+		"video_dash_manifest": mpd,
+		"number_of_qualities": 9,
+		"is_dash_eligible":    true,
+	}
+	body, err := json.Marshal(map[string]any{"items": []map[string]any{item}})
+	if err != nil {
+		t.Fatalf("marshal fixture: %v", err)
+	}
+
+	post, err := parseInstagramPost(body)
+	if err != nil {
+		t.Fatalf("parseInstagramPost: %v", err)
+	}
+	if post.VideoDashManifest != mpd {
+		t.Errorf("VideoDashManifest = %q, want the raw MPD XML string", post.VideoDashManifest)
+	}
+	if post.NumberOfQualities != 9 {
+		t.Errorf("NumberOfQualities = %d, want 9", post.NumberOfQualities)
+	}
+	if !post.IsDashEligible {
+		t.Errorf("IsDashEligible = false, want true")
+	}
+}
+
+func TestParseInstagramPostNoDashManifest(t *testing.T) {
+	// The embed / SSR / proxy fallback rungs never receive the DASH manifest
+	// (it is only on the authed CDP/REST path). A response WITHOUT the three
+	// DASH keys must still parse cleanly with the fields left empty/zero and
+	// NO error — fallback rungs must not fail or warn because the manifest is
+	// missing.
+	body := []byte(`{
+		"items": [
+			{
+				"pk": "111222333",
+				"code": "CuXFPB7Mv52",
+				"user": {"pk": "1", "username": "test", "full_name": "Test"},
+				"caption": {"text": "hi"},
+				"taken_at": 1700000000,
+				"media_type": 2,
+				"like_count": 42,
+				"video_versions": [{"url": "https://example.com/vid.mp4", "width": 720, "height": 1280, "type": 101}]
+			}
+		]
+	}`)
+
+	post, err := parseInstagramPost(body)
+	if err != nil {
+		t.Fatalf("parseInstagramPost: %v", err)
+	}
+	if post.VideoDashManifest != "" {
+		t.Errorf("VideoDashManifest = %q, want empty (key absent)", post.VideoDashManifest)
+	}
+	if post.NumberOfQualities != 0 {
+		t.Errorf("NumberOfQualities = %d, want 0 (key absent)", post.NumberOfQualities)
+	}
+	if post.IsDashEligible {
+		t.Errorf("IsDashEligible = true, want false (key absent)")
 	}
 }
 
