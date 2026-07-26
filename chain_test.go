@@ -89,6 +89,37 @@ func codesAndTexts(chain *Chain) [][2]string {
 	return out
 }
 
+// mockChainLister serves the author's listing (GetUserThreads shape) for
+// the ambiguous-branch cross-check. calls counts invocations so a test
+// can assert the listing was NOT consulted on the non-truncated path.
+type mockChainLister struct {
+	threads []*Thread
+	err     error
+	calls   int
+}
+
+func (m *mockChainLister) list(_ context.Context, _ string) ([]*Thread, error) {
+	m.calls++
+	if m.err != nil {
+		return nil, m.err
+	}
+	return m.threads, nil
+}
+
+// truncatedNoContinuationPage builds an SSR page that hits replyPageCap
+// with NO same-author continuation — the false-alarm trigger. The linked
+// post (rootCode) is the only same-author post on the page.
+func truncatedNoContinuationPage(rootCode string) []byte {
+	edges := []string{edge(post("1001", rootCode, "post 1", authorPk, authorUser, false, 1700000000, 1))}
+	for i := 0; i < replyPageCap; i++ {
+		edges = append(edges, edge(post(
+			fmt.Sprintf("3%d", i), fmt.Sprintf("TP%d", i), "third party",
+			"300", "troll", true, 1700001000+int64(i), 1,
+		)))
+	}
+	return ssrThreadPage(edges...)
+}
+
 // --- Tests ---
 
 // TestBuildAuthorChain_LinkAtRoot_3PostChain: link points at the root of
@@ -105,7 +136,7 @@ func TestBuildAuthorChain_LinkAtRoot_3PostChain(t *testing.T) {
 	)
 	main, replies := parsePage(t, page)
 
-	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, authorUser, "ROOT", main, replies, 1)
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, nil, authorUser, "ROOT", main, replies, 1)
 	if err != nil {
 		t.Fatalf("buildAuthorChain: %v", err)
 	}
@@ -140,7 +171,7 @@ func TestBuildAuthorChain_LinkAtMiddle(t *testing.T) {
 	)
 	main, replies := parsePage(t, page)
 
-	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, authorUser, "MID", main, replies, 1)
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, nil, authorUser, "MID", main, replies, 1)
 	if err != nil {
 		t.Fatalf("buildAuthorChain: %v", err)
 	}
@@ -168,7 +199,7 @@ func TestBuildAuthorChain_ThirdPartyRepliesExcluded(t *testing.T) {
 	)
 	main, replies := parsePage(t, page)
 
-	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, authorUser, "ROOT", main, replies, 1)
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, nil, authorUser, "ROOT", main, replies, 1)
 	if err != nil {
 		t.Fatalf("buildAuthorChain: %v", err)
 	}
@@ -196,7 +227,7 @@ func TestBuildAuthorChain_NestedContinuation(t *testing.T) {
 	)
 	main, replies := parsePage(t, page)
 
-	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, authorUser, "ROOT", main, replies, 1)
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, nil, authorUser, "ROOT", main, replies, 1)
 	if err != nil {
 		t.Fatalf("buildAuthorChain: %v", err)
 	}
@@ -227,7 +258,7 @@ func TestBuildAuthorChain_TruncatedPage_Incomplete(t *testing.T) {
 
 	// No mock pages needed: the walk finds no continuation and does not
 	// re-fetch the same post.
-	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, authorUser, "ROOT", main, replies, 1)
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, nil, authorUser, "ROOT", main, replies, 1)
 	if err != nil {
 		t.Fatalf("buildAuthorChain: %v", err)
 	}
@@ -290,7 +321,7 @@ func TestBuildAuthorChain_TruncatedPage_RecoversViaFollowUp(t *testing.T) {
 		},
 	}
 
-	chain, err := buildAuthorChain(context.Background(), mf.fetch, authorUser, "ROOT", main, replies, 1)
+	chain, err := buildAuthorChain(context.Background(), mf.fetch, nil, authorUser, "ROOT", main, replies, 1)
 	if err != nil {
 		t.Fatalf("buildAuthorChain: %v", err)
 	}
@@ -324,7 +355,7 @@ func TestBuildAuthorChain_BoundReached_Incomplete(t *testing.T) {
 	)
 	main, replies := parsePage(t, page)
 
-	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, authorUser, "ROOT", main, replies, 1)
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, nil, authorUser, "ROOT", main, replies, 1)
 	if err != nil {
 		t.Fatalf("buildAuthorChain: %v", err)
 	}
@@ -349,7 +380,7 @@ func TestBuildAuthorChain_SinglePost(t *testing.T) {
 	)
 	main, replies := parsePage(t, page)
 
-	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, authorUser, "SOLO", main, replies, 1)
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, nil, authorUser, "SOLO", main, replies, 1)
 	if err != nil {
 		t.Fatalf("buildAuthorChain: %v", err)
 	}
@@ -477,5 +508,210 @@ func TestSameAuthor_UsernameFallback(t *testing.T) {
 	}
 	if sameAuthor(p, "", "other") {
 		t.Error("sameAuthor by username for different user = true, want false")
+	}
+}
+
+// --- Listing cross-check tests (ambiguous truncated-page branch) ---
+//
+// The ambiguous branch: reply page hit replyPageCap AND no same-author
+// continuation was found on it. Without the listing cross-check the walk
+// reports Complete=false (the false alarm — fires on popularity, not on
+// truncation of an actual chain). The listing is the author's own recent
+// entries; each entry's Items carry that entry's chain flat. If the
+// listing covers the linked post, its Items are authoritative and
+// Complete upgrades to true.
+
+// TestBuildAuthorChain_TruncatedNoContinuation_ListingCovers_Single: the
+// false alarm. Truncated page, no continuation, listing covers the linked
+// post with a single-item entry (the post was never a chain). Expect
+// Complete=true, 1 post, NO incompleteness reason. This is RED before the
+// fix — today the walk reports Complete=false with the truncated reason.
+func TestBuildAuthorChain_TruncatedNoContinuation_ListingCovers_Single(t *testing.T) {
+	main, replies := parsePage(t, truncatedNoContinuationPage("SOLO"))
+
+	lister := &mockChainLister{threads: []*Thread{
+		{Items: []Post{
+			{Code: "SOLO", Text: "post 1", Author: ThreadsUser{ID: authorPk, Username: authorUser}, CreatedAt: time.Unix(1700000000, 0)},
+		}},
+	}}
+
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, lister.list, authorUser, "SOLO", main, replies, 1)
+	if err != nil {
+		t.Fatalf("buildAuthorChain: %v", err)
+	}
+	if !chain.Complete {
+		t.Errorf("Complete = false, want true (listing covers the post — false alarm) Reason=%q", chain.Reason)
+	}
+	if chain.Reason != "" {
+		t.Errorf("Reason = %q, want empty (chain is proven complete by the listing)", chain.Reason)
+	}
+	if len(chain.Posts) != 1 {
+		t.Errorf("len(Posts) = %d, want 1", len(chain.Posts))
+	}
+	if chain.Posts[0].Code != "SOLO" {
+		t.Errorf("Posts[0].Code = %q, want SOLO", chain.Posts[0].Code)
+	}
+	if chain.Requests != 2 {
+		t.Errorf("Requests = %d, want 2 (initial + listing)", chain.Requests)
+	}
+	if lister.calls != 1 {
+		t.Errorf("lister.calls = %d, want 1", lister.calls)
+	}
+	rendered := RenderChain(chain)
+	if strings.Contains(rendered, "incomplete") {
+		t.Errorf("rendered text has incompleteness note for a proven-complete single post:\n%s", rendered)
+	}
+}
+
+// TestBuildAuthorChain_TruncatedNoContinuation_ListingCovers_3Items: the
+// listing covers the linked post with a 3-item chain (the continuation
+// fell beyond the 20-reply-thread cap and is recovered from the listing).
+// Expect all 3 posts present, in writing order, Complete=true.
+func TestBuildAuthorChain_TruncatedNoContinuation_ListingCovers_3Items(t *testing.T) {
+	main, replies := parsePage(t, truncatedNoContinuationPage("ROOT"))
+
+	// Listing entry: the full 3-post chain flat, NOT in writing order
+	// (listing order is not chronological — measured earlier). orderChain
+	// must restore writing order by CreatedAt.
+	lister := &mockChainLister{threads: []*Thread{
+		{Items: []Post{
+			{Code: "P3", Text: "post 3", Author: ThreadsUser{ID: authorPk, Username: authorUser}, CreatedAt: time.Unix(1700002000, 0)},
+			{Code: "ROOT", Text: "post 1", Author: ThreadsUser{ID: authorPk, Username: authorUser}, CreatedAt: time.Unix(1700000000, 0)},
+			{Code: "P2", Text: "post 2", Author: ThreadsUser{ID: authorPk, Username: authorUser}, CreatedAt: time.Unix(1700001000, 0)},
+		}},
+	}}
+
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, lister.list, authorUser, "ROOT", main, replies, 1)
+	if err != nil {
+		t.Fatalf("buildAuthorChain: %v", err)
+	}
+	if got := codesAndTexts(chain); len(got) != 3 ||
+		got[0] != [2]string{"ROOT", "post 1"} ||
+		got[1] != [2]string{"P2", "post 2"} ||
+		got[2] != [2]string{"P3", "post 3"} {
+		t.Errorf("chain order = %v, want [ROOT, P2, P3] in writing order", got)
+	}
+	if !chain.Complete {
+		t.Errorf("Complete = false, want true (listing covers the chain) Reason=%q", chain.Reason)
+	}
+	if chain.Reason != "" {
+		t.Errorf("Reason = %q, want empty", chain.Reason)
+	}
+	if chain.Requests != 2 {
+		t.Errorf("Requests = %d, want 2 (initial + listing)", chain.Requests)
+	}
+}
+
+// TestBuildAuthorChain_TruncatedNoContinuation_ListingMisses: the listing
+// does NOT contain the linked post (an older post, beyond the listing
+// window). Nothing was learned — Complete stays false and the truncation
+// reason stands unchanged. The listing fetch still counts as a request.
+func TestBuildAuthorChain_TruncatedNoContinuation_ListingMisses(t *testing.T) {
+	main, replies := parsePage(t, truncatedNoContinuationPage("OLD"))
+
+	// Listing has recent entries that do NOT include OLD.
+	lister := &mockChainLister{threads: []*Thread{
+		{Items: []Post{
+			{Code: "OTHER", Text: "unrelated recent post", Author: ThreadsUser{ID: authorPk, Username: authorUser}, CreatedAt: time.Unix(1800000000, 0)},
+		}},
+	}}
+
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, lister.list, authorUser, "OLD", main, replies, 1)
+	if err != nil {
+		t.Fatalf("buildAuthorChain: %v", err)
+	}
+	if chain.Complete {
+		t.Errorf("Complete = true, want false (listing did not cover the post)")
+	}
+	if !strings.Contains(chain.Reason, "truncated") {
+		t.Errorf("Reason = %q, want the truncation reason unchanged", chain.Reason)
+	}
+	if len(chain.Posts) != 1 {
+		t.Errorf("len(Posts) = %d, want 1 (only the root)", len(chain.Posts))
+	}
+	if chain.Requests != 2 {
+		t.Errorf("Requests = %d, want 2 (initial + listing attempt)", chain.Requests)
+	}
+}
+
+// TestBuildAuthorChain_NonTruncatedPage_ListingNotConsulted: a
+// non-truncated page completes in 1 request; the listing must never be
+// consulted. Asserts the lister seam was not called and Requests == 1.
+func TestBuildAuthorChain_NonTruncatedPage_ListingNotConsulted(t *testing.T) {
+	page := ssrThreadPage(
+		edge(post("1001", "ROOT", "post 1", authorPk, authorUser, false, 1700000000, 1)),
+		edge(post("1002", "P2", "post 2", authorPk, authorUser, true, 1700001000, 1)),
+		edge(post("2001", "TP", "third party", "200", "other", true, 1700002000, 1)),
+	)
+	main, replies := parsePage(t, page)
+
+	lister := &mockChainLister{threads: []*Thread{
+		{Items: []Post{{Code: "ROOT", Author: ThreadsUser{ID: authorPk, Username: authorUser}}}},
+	}}
+
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, lister.list, authorUser, "ROOT", main, replies, 1)
+	if err != nil {
+		t.Fatalf("buildAuthorChain: %v", err)
+	}
+	if lister.calls != 0 {
+		t.Errorf("lister.calls = %d, want 0 (non-truncated page must not consult the listing)", lister.calls)
+	}
+	if chain.Requests != 1 {
+		t.Errorf("Requests = %d, want 1 (common case must cost exactly 1 request)", chain.Requests)
+	}
+	if !chain.Complete {
+		t.Errorf("Complete = false, want true (Reason=%q)", chain.Reason)
+	}
+}
+
+// TestBuildAuthorChain_TruncatedNoContinuation_ListingFetchError: the
+// listing fetch errors. The walk degrades to today's behaviour —
+// Complete=false with the truncation reason — and no error is surfaced to
+// the caller.
+func TestBuildAuthorChain_TruncatedNoContinuation_ListingFetchError(t *testing.T) {
+	main, replies := parsePage(t, truncatedNoContinuationPage("ROOT"))
+
+	lister := &mockChainLister{err: fmt.Errorf("listing endpoint down")}
+
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, lister.list, authorUser, "ROOT", main, replies, 1)
+	if err != nil {
+		t.Fatalf("buildAuthorChain: %v (listing error must not surface to caller)", err)
+	}
+	if chain.Complete {
+		t.Errorf("Complete = true, want false (listing fetch failed — degrade to truncated behaviour)")
+	}
+	if !strings.Contains(chain.Reason, "truncated") {
+		t.Errorf("Reason = %q, want the truncation reason (degraded to today's behaviour)", chain.Reason)
+	}
+	if len(chain.Posts) != 1 {
+		t.Errorf("len(Posts) = %d, want 1", len(chain.Posts))
+	}
+}
+
+// TestBuildAuthorChain_TruncatedNoContinuation_ListingDifferentAuthor: a
+// listing entry contains the linked post's code but its items are by a
+// different author (pk mismatch). The entry is ignored — author identity
+// is decided by pk, not by the listing's grouping. Complete stays false.
+func TestBuildAuthorChain_TruncatedNoContinuation_ListingDifferentAuthor(t *testing.T) {
+	main, replies := parsePage(t, truncatedNoContinuationPage("ROOT"))
+
+	// The entry contains ROOT's code but is authored by a different pk.
+	// (Defensive: the listing is the author's own, but a pk mismatch must
+	// not be trusted.)
+	lister := &mockChainLister{threads: []*Thread{
+		{Items: []Post{
+			{Code: "ROOT", Text: "post 1", Author: ThreadsUser{ID: "999", Username: "impersonator"}, CreatedAt: time.Unix(1700000000, 0)},
+		}},
+	}}
+
+	chain, err := buildAuthorChain(context.Background(), (&mockChainFetcher{}).fetch, lister.list, authorUser, "ROOT", main, replies, 1)
+	if err != nil {
+		t.Fatalf("buildAuthorChain: %v", err)
+	}
+	if chain.Complete {
+		t.Errorf("Complete = true, want false (pk-mismatched listing entry must be ignored)")
+	}
+	if !strings.Contains(chain.Reason, "truncated") {
+		t.Errorf("Reason = %q, want the truncation reason (entry ignored)", chain.Reason)
 	}
 }

@@ -26,6 +26,13 @@ const (
 	// prove it saw every reply thread, so it must report possible
 	// incompleteness.
 	replyPageCap = 20
+	// chainListingCount is the number of recent threads requested from the
+	// author's own listing (GetUserThreads) when the walk cannot prove the
+	// tail and cross-checks the listing. Each listing entry carries one
+	// chain flat in its Items, so 20 entries cover a generous "recent"
+	// window; an older linked post beyond the window is honestly left
+	// Complete=false.
+	chainListingCount = 20
 )
 
 // Chain is a Threads author chain: the sequence of posts one author wrote
@@ -79,27 +86,47 @@ type Chain struct {
 // fell beyond a truncated page; if it still cannot prove the tail,
 // Complete stays false.
 //
-// The listing endpoint (GetUserThreads) is NOT consulted automatically:
-// it carries the flat chain but only for the author's RECENT posts, so it
-// is unreliable for older threads and costs an extra request. A consumer
-// that wants a cross-check can call GetUserThreads itself and merge by
-// Post.Code.
+// The listing endpoint (GetUserThreads) IS consulted, but only in the
+// ambiguous branch — the reply page was truncated (hit replyPageCap) AND
+// no same-author continuation was found on it. In that branch the walk
+// cannot prove the tail, so it asks the author's own listing (the
+// independent ground truth for "did this author continue their own post")
+// as a cross-check. If the listing contains an entry whose Items include
+// the linked post, that entry's Items are the authoritative chain: the
+// walk adopts any posts it missed and sets Complete=true (absence of
+// further items is now proof, not ignorance). If the listing does NOT
+// contain the linked post (an older post, beyond the listing window),
+// nothing was learned — Complete stays false and the truncation reason
+// stands. The extra fetch is counted in Chain.Requests and kept inside
+// maxChainReqs; the common non-truncated case still costs exactly 1
+// request.
 func (c *Client) GetAuthorChain(ctx context.Context, username, postCode string) (*Chain, error) {
 	main, replies, err := c.GetThread(ctx, username, postCode)
 	if err != nil {
 		return nil, fmt.Errorf("GetAuthorChain: %w", err)
 	}
-	return buildAuthorChain(ctx, c.GetThread, username, postCode, main, replies, 1)
+	lister := chainLister(func(ctx context.Context, u string) ([]*Thread, error) {
+		return c.GetUserThreads(ctx, u, chainListingCount)
+	})
+	return buildAuthorChain(ctx, c.GetThread, lister, username, postCode, main, replies, 1)
 }
 
 // chainFetcher is the fetch seam buildAuthorChain uses for follow-up
 // page fetches. GetAuthorChain passes c.GetThread; tests pass a mock.
 type chainFetcher func(ctx context.Context, username, postCode string) (*Thread, []*Thread, error)
 
+// chainLister is the fetch seam buildAuthorChain uses for the author's
+// own listing (GetUserThreads) in the ambiguous truncated-page branch.
+// GetAuthorChain passes a wrapper over c.GetUserThreads; tests pass a
+// mock or nil to skip the cross-check.
+type chainLister func(ctx context.Context, username string) ([]*Thread, error)
+
 // buildAuthorChain is the pure, network-free core of GetAuthorChain.
-// It takes the initial SSR result (main + replies) and a fetch function
-// for follow-up fetches, and returns the completed chain.
-func buildAuthorChain(ctx context.Context, fetch chainFetcher, username, postCode string, main *Thread, replies []*Thread, requests int) (*Chain, error) {
+// It takes the initial SSR result (main + replies), a fetch function for
+// follow-up page fetches, and a lister for the author's own listing
+// (consulted only in the ambiguous truncated-page branch; may be nil to
+// skip the cross-check). It returns the completed chain.
+func buildAuthorChain(ctx context.Context, fetch chainFetcher, lister chainLister, username, postCode string, main *Thread, replies []*Thread, requests int) (*Chain, error) {
 	if main == nil || len(main.Items) == 0 {
 		return nil, fmt.Errorf("buildAuthorChain: no items in main thread")
 	}
@@ -137,6 +164,7 @@ func buildAuthorChain(ctx context.Context, fetch chainFetcher, username, postCod
 	pageTruncated := len(replies) >= replyPageCap
 	hitPostBound := false
 	hitReqBound := false
+	listingCovered := false // the listing cross-check proved the tail (ambiguous branch only)
 	var fetchErr error
 
 	for {
@@ -176,8 +204,35 @@ func buildAuthorChain(ctx context.Context, fetch chainFetcher, username, postCod
 		// new last post's own page may surface further continuation
 		// beyond the truncated original page. If no continuation was
 		// found, re-fetching the same last post would return the same
-		// truncated page, so we stop and report possible incompleteness.
+		// truncated page. Before giving up, cross-check the author's
+		// own listing (the independent ground truth for "did this
+		// author continue their own post"): if the listing covers the
+		// linked post, its Items are the authoritative chain and
+		// Complete upgrades to true. If the listing does not cover the
+		// post (an older post beyond the listing window) or the fetch
+		// fails, we stop and report possible incompleteness — the
+		// listing can only ADD posts or UPGRADE Complete, never drop a
+		// post the walk already found or weaken completeness.
 		if !added {
+			if lister != nil && requests < maxChainReqs {
+				listing, lerr := lister(ctx, username)
+				if lerr == nil {
+					requests++
+					if covered := listingCoversPost(listing, requestedPost.Code, authorID, authorHandle); covered != nil {
+						for _, p := range covered {
+							if !hasCode(posts, p.Code) {
+								posts = append(posts, p)
+							}
+						}
+						listingCovered = true
+					}
+				}
+				// A listing fetch error (lerr != nil) is swallowed:
+				// the walk degrades to today's behaviour
+				// (Complete=false with the truncation reason). No
+				// error is surfaced to the caller — the listing is a
+				// best-effort cross-check, not a hard dependency.
+			}
 			break
 		}
 		if requests >= maxChainReqs {
@@ -216,7 +271,7 @@ func buildAuthorChain(ctx context.Context, fetch chainFetcher, username, postCod
 	case fetchErr != nil:
 		chain.Complete = false
 		chain.Reason = fmt.Sprintf("follow-up fetch failed: %v", fetchErr)
-	case pageTruncated:
+	case pageTruncated && !listingCovered:
 		chain.Complete = false
 		chain.Reason = fmt.Sprintf("reply page truncated (%d reply threads, cap %d); further author continuation may exist beyond the page", len(replies), replyPageCap)
 	default:
@@ -258,6 +313,53 @@ func hasCode(posts []Post, code string) bool {
 		}
 	}
 	return false
+}
+
+// listingCoversPost reports whether the author's listing contains an
+// entry whose Items include a post with the given code (the linked post),
+// AND that entry's same-author items are by the chain's author (pk match).
+// Returns the same-author items of the covering entry so the walk can
+// adopt any posts it missed; returns nil if no entry covers the post or
+// the covering entry is by a different author (pk mismatch — ignored).
+//
+// The listing is the author's own recent entries; each entry's Items
+// carry that entry's chain flat (measured: a 3-post chain appears as one
+// entry with items=3). Membership is decided by author pk (sameAuthor),
+// not by the listing's grouping — a pk-mismatched entry is not trusted.
+// The returned items are NOT in writing order; orderChain restores it.
+func listingCoversPost(listing []*Thread, code string, authorID, authorHandle string) []Post {
+	if code == "" {
+		return nil
+	}
+	for _, t := range listing {
+		if t == nil {
+			continue
+		}
+		found := false
+		for _, p := range t.Items {
+			if p.Code == code {
+				found = true
+				break
+			}
+		}
+		if !found {
+			continue
+		}
+		// Author-identity discipline: adopt only items that pass
+		// sameAuthor. A listing entry by a different author (pk
+		// mismatch) yields no same-author items and is ignored.
+		var same []Post
+		for _, p := range t.Items {
+			if sameAuthor(p, authorID, authorHandle) {
+				same = append(same, p)
+			}
+		}
+		if len(same) == 0 {
+			continue
+		}
+		return same
+	}
+	return nil
 }
 
 // orderChain sorts chain posts into author writing order (oldest first)
