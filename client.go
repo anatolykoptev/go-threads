@@ -12,6 +12,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	stealth "github.com/anatolykoptev/go-stealth"
@@ -22,9 +23,13 @@ const maxRetries = 3
 
 // Client is the Threads scraping client.
 type Client struct {
-	bc   *stealth.BrowserClient
-	wowa *wowaTransport // CDP in-page-fetch transport via go-wowa; nil = stealth fallback
-	cfg  Config
+	bc      *stealth.BrowserClient
+	wowa    *wowaTransport // CDP in-page-fetch transport via go-wowa; nil = stealth fallback
+	cfg     Config
+	limiter *ratelimit.DomainLimiter // shared with the stealth middleware; CDP paths gate on it too
+	// cdpThrottled counts CDP requests the limiter actually delayed — the
+	// visible signal that the budget is biting (go-wowa#92).
+	cdpThrottled atomic.Int64
 
 	// LSD token state
 	lsd    string
@@ -84,7 +89,7 @@ func NewClient(cfg Config) (*Client, error) {
 		stealth.ClientHintsMiddleware,
 	)
 
-	c := &Client{bc: bc, cfg: cfg}
+	c := &Client{bc: bc, cfg: cfg, limiter: limiter}
 	if cfg.Token != "" {
 		c.token = cfg.Token
 	}
