@@ -47,6 +47,10 @@ type Client struct {
 	authMu sync.RWMutex
 }
 
+// SessionPoolSize reports the configured CDP session-pool size (0/1 = the
+// single-session default). Exposed so embedders can verify config wiring.
+func (c *Client) SessionPoolSize() int { return c.cfg.SessionPool }
+
 // nextSession returns the session handle for one CDP call: cfg.Session when
 // SessionPool <= 1, else "<Session>-<n>" rotating through the pool. Callers
 // pick ONCE per top-level operation so a cookie-check + fetch pair lands on
