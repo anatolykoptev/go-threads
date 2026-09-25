@@ -95,7 +95,6 @@ func (c *Client) cdpMarkLimited(targetURL string) {
 	}
 }
 
-
 // wowaActionResult mirrors browser.ActionResult — only the fields doCDP reads.
 type wowaActionResult struct {
 	Action string          `json:"action"`
