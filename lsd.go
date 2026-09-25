@@ -102,7 +102,7 @@ func (c *Client) fetchLSDTokenCDP(ctx context.Context) (lsd string, csrf string,
 })()`
 
 	pageURL := threadsBaseURL + "/@instagram"
-	res, err := c.wowa.interact(ctx, c.cfg.Session, pageURL, []wowaAction{{Type: "evaluate", Script: script}})
+	res, err := c.wowa.interact(ctx, c.nextSession(), pageURL, []wowaAction{{Type: "evaluate", Script: script}})
 	if err != nil {
 		return "", "", "", fmt.Errorf("fetch LSD token via CDP: %w", err)
 	}
