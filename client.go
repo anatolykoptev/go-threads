@@ -31,6 +31,9 @@ type Client struct {
 	// visible signal that the budget is biting (go-wowa#92).
 	cdpThrottled atomic.Int64
 
+	// sessionRR round-robins session names when Config.SessionPool > 1.
+	sessionRR atomic.Uint32
+
 	// LSD token state
 	lsd    string
 	csrf   string
@@ -42,6 +45,19 @@ type Client struct {
 	token  string // "IGT:2:<token>"
 	userID string // logged-in user ID
 	authMu sync.RWMutex
+}
+
+// nextSession returns the session handle for one CDP call: cfg.Session when
+// SessionPool <= 1, else "<Session>-<n>" rotating through the pool. Callers
+// pick ONCE per top-level operation so a cookie-check + fetch pair lands on
+// the same page.
+func (c *Client) nextSession() string {
+	n := c.cfg.SessionPool
+	if n <= 1 {
+		return c.cfg.Session
+	}
+	i := c.sessionRR.Add(1) % uint32(n)
+	return fmt.Sprintf("%s-%d", c.cfg.Session, i)
 }
 
 // NewClient creates a new Threads client.

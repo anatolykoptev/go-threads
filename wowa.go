@@ -375,12 +375,13 @@ func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form 
 	}
 
 	pageURL := igWebBaseURL + "/"
+	sess := c.nextSession()
 
 	// P1-guard: verify the pinned tab is authenticated before issuing the
 	// media fetch. A logged-out tab returns a login-wall JSON (~700 bytes)
 	// that would otherwise be silently misclassified as a successful (but
 	// empty) media response.
-	if err := c.checkSessionCookie(ctx, c.cfg.Session, pageURL); err != nil {
+	if err := c.checkSessionCookie(ctx, sess, pageURL); err != nil {
 		return nil, fmt.Errorf("%s: %w", endpoint, err)
 	}
 
@@ -398,7 +399,7 @@ func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form 
 		return nil, fmt.Errorf("%s: build fetch script: %w", endpoint, err)
 	}
 
-	fr, err := c.wowaFetchOnce(ctx, c.cfg.Session, pageURL, js)
+	fr, err := c.wowaFetchOnce(ctx, sess, pageURL, js)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", endpoint, err)
 	}
@@ -456,7 +457,7 @@ func (c *Client) doGraphQLCDP(ctx context.Context, endpoint, bodyStr, lsd, frien
 	if err := c.cdpThrottle(ctx, threadsBaseURL+"/graphql/query"); err != nil {
 		return nil, 0, fmt.Errorf("%s: %w", endpoint, err)
 	}
-	fr, err := c.wowaFetchOnce(ctx, c.cfg.Session, pageURL, script)
+	fr, err := c.wowaFetchOnce(ctx, c.nextSession(), pageURL, script)
 	if err != nil {
 		return nil, 0, fmt.Errorf("%s: %w", endpoint, err)
 	}
@@ -486,7 +487,7 @@ func (c *Client) fetchPageCDP(ctx context.Context, pageURL string) ([]byte, int,
 		{Type: "navigate", URL: pageURL},
 		{Type: "evaluate", Script: "document.documentElement.outerHTML"},
 	}
-	res, err := c.wowa.interact(ctx, c.cfg.Session, pageURL, actions)
+	res, err := c.wowa.interact(ctx, c.nextSession(), pageURL, actions)
 	if err != nil {
 		return nil, 0, fmt.Errorf("go-wowa interact: %w", err)
 	}

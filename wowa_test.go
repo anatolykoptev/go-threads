@@ -410,3 +410,36 @@ func TestWowaTransportInteract_RequestShape(t *testing.T) {
 		t.Errorf("mode = %q", got.Mode)
 	}
 }
+
+// TestNextSession_PoolRoundRobins covers go-wowa#94: SessionPool=N must spread
+// calls across "<Session>-0..N-1" so go-wowa session locks do not serialize
+// every concurrent CDP call onto one page.
+func TestNextSession_PoolRoundRobins(t *testing.T) {
+	c := &Client{cfg: Config{Session: "threads-mcp", SessionPool: 3}}
+	seen := map[string]bool{}
+	for i := 0; i < 9; i++ {
+		s := c.nextSession()
+		if s != "threads-mcp-0" && s != "threads-mcp-1" && s != "threads-mcp-2" {
+			t.Fatalf("unexpected session %q", s)
+		}
+		seen[s] = true
+	}
+	if len(seen) != 3 {
+		t.Errorf("expected rotation across all 3 pool slots, saw %v", seen)
+	}
+	// First two picks must differ — defeats the purpose if they collide.
+	c2 := &Client{cfg: Config{Session: "threads-mcp", SessionPool: 3}}
+	if c2.nextSession() == c2.nextSession() {
+		t.Error("consecutive nextSession calls returned the same slot")
+	}
+}
+
+// TestNextSession_PoolOff keeps single-session behavior when SessionPool <= 1.
+func TestNextSession_PoolOff(t *testing.T) {
+	for _, n := range []int{0, 1, -2} {
+		c := &Client{cfg: Config{Session: "threads-mcp", SessionPool: n}}
+		if s := c.nextSession(); s != "threads-mcp" {
+			t.Errorf("SessionPool=%d: got %q, want threads-mcp", n, s)
+		}
+	}
+}
