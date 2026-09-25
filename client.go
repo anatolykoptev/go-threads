@@ -60,7 +60,6 @@ func (c *Client) nextSession() string {
 	return fmt.Sprintf("%s-%d", c.cfg.Session, i)
 }
 
-
 // NewClient creates a new Threads client.
 func NewClient(cfg Config) (*Client, error) {
 	cfg.defaults()

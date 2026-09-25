@@ -25,8 +25,8 @@ type Config struct {
 	// CDP in-page-fetch transport via go-wowa (enables the private web API path).
 	// When WowaURL is set, private API calls are routed through a real browser
 	// session instead of the datacenter go-stealth path.
-	WowaURL        string // e.g. http://go-wowa:8906
-	Session        string // go-wowa named session handle (default "threads-cdp")
+	WowaURL string // e.g. http://go-wowa:8906
+	Session string // go-wowa named session handle (default "threads-cdp")
 	// SessionPool spreads CDP calls across N pages named "<Session>-0..N-1"
 	// on the shared persistent context. go-wowa serializes calls per session
 	// NAME, so a single name makes concurrent calls queue and the losers hit
