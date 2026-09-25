@@ -62,6 +62,40 @@ type wowaInteractRequest struct {
 	Proxy   *string      `json:"proxy,omitempty"` // residential proxy URL for the browser fetch
 }
 
+// cdpRateLimitCooldown is the fixed backoff applied to a domain when a CDP
+// request returns 429 — the in-page fetch returns no Retry-After header, so a
+// fixed window stands in. Matches the limiter's 15m rules on the safe side.
+const cdpRateLimitCooldown = 5 * time.Minute
+
+// cdpThrottle gates a CDP-path request on the same per-domain limiter the
+// stealth transport uses. The evaluate seam issues real instagram/threads
+// requests from the authenticated tab — the ban lands on the shared cookie
+// jar, so the budget must bite here too (go-wowa#92). The limiter is keyed on
+// the TARGET url, not the go-wowa transport endpoint.
+func (c *Client) cdpThrottle(ctx context.Context, targetURL string) error {
+	if c.limiter == nil {
+		return nil
+	}
+	if !c.limiter.Allow(targetURL) {
+		n := c.cdpThrottled.Add(1)
+		slog.Warn("threads: CDP request held by domain limiter",
+			slog.String("url", targetURL),
+			slog.Int64("throttled_total", n))
+	}
+	if err := c.limiter.Wait(ctx, targetURL); err != nil {
+		return fmt.Errorf("rate limit %s: %w", targetURL, err)
+	}
+	return nil
+}
+
+// cdpMarkLimited backs the limiter off after a real 429 on the CDP path.
+func (c *Client) cdpMarkLimited(targetURL string) {
+	if c.limiter != nil {
+		c.limiter.MarkRateLimited(targetURL, time.Now().Add(cdpRateLimitCooldown))
+	}
+}
+
+
 // wowaActionResult mirrors browser.ActionResult — only the fields doCDP reads.
 type wowaActionResult struct {
 	Action string          `json:"action"`
@@ -351,6 +385,10 @@ func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form 
 		return nil, fmt.Errorf("%s: %w", endpoint, err)
 	}
 
+	if err := c.cdpThrottle(ctx, webURL); err != nil {
+		return nil, fmt.Errorf("%s: %w", endpoint, err)
+	}
+
 	asbd := ""
 	if strings.HasPrefix(webURL, igWebBaseURL) {
 		asbd = igWebXAsbdID
@@ -388,6 +426,10 @@ func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form 
 		}
 	}
 
+	if fr.Status == 429 {
+		c.cdpMarkLimited(webURL)
+	}
+
 	if fr.Status != 200 {
 		return nil, &APIError{Status: fr.Status, Class: classifyHTTPStatus(fr.Status), Message: fmt.Sprintf("HTTP %d", fr.Status)}
 	}
@@ -412,6 +454,9 @@ func (c *Client) doGraphQLCDP(ctx context.Context, endpoint, bodyStr, lsd, frien
 	}
 
 	pageURL := threadsBaseURL + "/"
+	if err := c.cdpThrottle(ctx, threadsBaseURL+"/graphql/query"); err != nil {
+		return nil, 0, fmt.Errorf("%s: %w", endpoint, err)
+	}
 	fr, err := c.wowaFetchOnce(ctx, c.cfg.Session, pageURL, script)
 	if err != nil {
 		return nil, 0, fmt.Errorf("%s: %w", endpoint, err)
@@ -421,6 +466,9 @@ func (c *Client) doGraphQLCDP(ctx context.Context, endpoint, bodyStr, lsd, frien
 	}
 	if fr.Status == 200 && len(fr.Body) > 0 && fr.Body[0] == '<' {
 		return nil, 0, fmt.Errorf("%s: HTML response from API", endpoint)
+	}
+	if fr.Status == 429 {
+		c.cdpMarkLimited(threadsBaseURL + "/graphql/query")
 	}
 	if fr.Status != 200 {
 		return nil, fr.Status, nil
@@ -432,6 +480,9 @@ func (c *Client) doGraphQLCDP(ctx context.Context, endpoint, bodyStr, lsd, frien
 // the rendered page HTML (document.documentElement.outerHTML). It returns 200
 // on success, or 302 if the page contains a login redirect.
 func (c *Client) fetchPageCDP(ctx context.Context, pageURL string) ([]byte, int, error) {
+	if err := c.cdpThrottle(ctx, pageURL); err != nil {
+		return nil, 0, err
+	}
 	actions := []wowaAction{
 		{Type: "navigate", URL: pageURL},
 		{Type: "evaluate", Script: "document.documentElement.outerHTML"},
