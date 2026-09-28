@@ -2,6 +2,7 @@ package threads
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 	"time"
 )
@@ -116,7 +117,7 @@ func TestParseThreadFromSSR(t *testing.T) {
 		<script>"result":{"data":{"data":{"edges":[{"node":{"thread_items":[{"post":{"pk":"999888777","code":"MainThread1","user":{"pk":"12345","username":"zuck","full_name":"Mark Zuckerberg","is_verified":true},"caption":{"text":"Original post"},"taken_at":1700000000,"like_count":1000,"media_type":1,"text_post_app_info":{"is_reply":false,"direct_reply_count":50}}}]}},{"node":{"thread_items":[{"post":{"pk":"111000111","code":"Reply1Code","user":{"pk":"67890","username":"replier","full_name":"Replier User","is_verified":false},"caption":{"text":"Great post!"},"taken_at":1700001000,"like_count":5,"media_type":1,"text_post_app_info":{"is_reply":true,"direct_reply_count":0}}}]}}]}},"sequence_number":0}</script>
 	`)
 
-	main, replies, err := parseThreadFromSSR(html)
+	main, replies, err := parseThreadFromSSR(html, "")
 	if err != nil {
 		t.Fatalf("parseThreadFromSSR: %v", err)
 	}
@@ -139,6 +140,84 @@ func TestParseThreadFromSSR(t *testing.T) {
 	}
 	if !replies[0].Items[0].IsReply {
 		t.Error("reply.IsReply = false, want true")
+	}
+}
+
+// TestParseThreadFromSSR_PostPageMediaShape covers the CURRENT threads.com
+// post-page markup (captured live 2026-09-28, issue #57): the page no longer
+// embeds data.data.edges[].node.thread_items — the main post sits in a
+// {"media":<post>} block and replies under
+// media.text_post_app_info.direct_replies.edges[].node.posts.edges[].node.
+// Fixture is sanitized live HTML (token fields blanked, replies trimmed to 3).
+func TestParseThreadFromSSR_PostPageMediaShape(t *testing.T) {
+	html, err := os.ReadFile("testdata/thread_page_post.html")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	main, replies, err := parseThreadFromSSR(html, "DV0De6jlB_v")
+	if err != nil {
+		t.Fatalf("parseThreadFromSSR: %v", err)
+	}
+	if len(main.Items) != 1 {
+		t.Fatalf("len(main.Items) = %d, want 1", len(main.Items))
+	}
+	m := main.Items[0]
+	if m.Code != "DV0De6jlB_v" {
+		t.Errorf("main.Code = %q, want DV0De6jlB_v", m.Code)
+	}
+	if m.Author.Username != "karpathy" {
+		t.Errorf("main.Author = %q, want karpathy", m.Author.Username)
+	}
+	if m.LikeCount != 232 {
+		t.Errorf("main.LikeCount = %d, want 232", m.LikeCount)
+	}
+	if len(replies) != 3 {
+		t.Fatalf("len(replies) = %d, want 3", len(replies))
+	}
+	r := replies[0].Items[0]
+	if r.Author.Username != "xioaib_" || r.Code != "DV0Ojg3Da_7" {
+		t.Errorf("reply[0] = %s/%s, want xioaib_/DV0Ojg3Da_7", r.Author.Username, r.Code)
+	}
+	if !r.IsReply {
+		t.Error("reply.IsReply = false, want true")
+	}
+}
+
+// TestParseThreadFromSSR_MediaWrongCode guards the media-path main-post
+// selector: with wantCode set, a page whose media block carries a different
+// code must NOT be accepted (protects against relay-prefetch blocks for
+// related posts winning first-wins selection).
+func TestParseThreadFromSSR_MediaWrongCode(t *testing.T) {
+	html := []byte(`<html><script>"result":{"data":{"media":{"pk":"111","code":"OTHER","user":{"pk":"2","username":"a"},"caption":{"text":"x"},"taken_at":1700000000,"like_count":1}},"sequence_number":0}</script></html>`)
+	if _, _, err := parseThreadFromSSR(html, "WANTCODE"); err == nil {
+		t.Fatal("want error when media code != wantCode")
+	}
+	main, _, err := parseThreadFromSSR(html, "")
+	if err != nil {
+		t.Fatalf("wantCode=\"\" should accept the media block: %v", err)
+	}
+	if main.Items[0].Code != "OTHER" {
+		t.Errorf("main.Code = %q, want OTHER", main.Items[0].Code)
+	}
+}
+
+// TestParseThreadFromSSR_MediaSelfThread exercises the self_thread merge:
+// the author's continuation posts extend main.Items, and an echo of the main
+// post (same pk) inside self_thread must not duplicate it.
+func TestParseThreadFromSSR_MediaSelfThread(t *testing.T) {
+	html := []byte(`<html>
+	<script>"result":{"data":{"media":{"pk":"100","code":"MAIN","user":{"pk":"7","username":"natgeo"},"caption":{"text":"first"},"taken_at":1700000000,"like_count":5}},"sequence_number":0}</script>
+	<script>"result":{"data":{"media":{"id":"100","text_post_app_info":{"self_thread":{"posts":{"edges":[{"node":{"pk":"100","code":"MAIN","user":{"pk":"7","username":"natgeo"},"caption":{"text":"echo of main"},"taken_at":1700000000}},{"node":{"pk":"101","code":"CONT1","user":{"pk":"7","username":"natgeo"},"caption":{"text":"second in chain"},"taken_at":1700000100}}]}}}}},"sequence_number":0}</script>
+	</html>`)
+	main, _, err := parseThreadFromSSR(html, "MAIN")
+	if err != nil {
+		t.Fatalf("parseThreadFromSSR: %v", err)
+	}
+	if len(main.Items) != 2 {
+		t.Fatalf("len(main.Items) = %d, want 2 (main + self-continuation)", len(main.Items))
+	}
+	if main.Items[1].Code != "CONT1" {
+		t.Errorf("Items[1].Code = %q, want CONT1", main.Items[1].Code)
 	}
 }
 
