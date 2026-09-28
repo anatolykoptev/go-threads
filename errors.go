@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+// ErrUnexpectedShape means the response parsed as JSON but carried none of the
+// expected containers — typically a rotated doc_id or a changed schema.
+var ErrUnexpectedShape = errors.New("threads: unexpected response shape")
+
 // errorClass categorizes HTTP error responses.
 type errorClass int
 
@@ -17,6 +21,7 @@ const (
 	errLoginRedirect            // 200 but body contains login redirect
 	errChallenge                // 200 with a small JSON challenge/login envelope
 	errLoginRequired            // pinned tab has no sessionid cookie (logged out)
+	errClientError              // any other non-2xx status (e.g. 400 on a rotated doc_id)
 )
 
 // classifyHTTPStatus maps an HTTP status code to an error class.
@@ -33,7 +38,7 @@ func classifyHTTPStatus(status int) errorClass {
 	case status >= 500:
 		return errServerError
 	default:
-		return errNone
+		return errClientError
 	}
 }
 

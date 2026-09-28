@@ -365,6 +365,10 @@ func TestReadMethods_WowaURLEmpty_KeepStealthPath(t *testing.T) {
 		{name: "SearchUserPrivate", call: func(c *Client, ctx context.Context) error { _, err := c.SearchUserPrivate(ctx, "threads"); return err }},
 		{name: "GetThreadByID", call: func(c *Client, ctx context.Context) error { _, _, err := c.GetThreadByID(ctx, "999"); return err }},
 		{name: "SearchUsers", call: func(c *Client, ctx context.Context) error { _, err := c.SearchUsers(ctx, "threads", 5); return err }},
+		{name: "SearchPosts", call: func(c *Client, ctx context.Context) error {
+			_, err := c.SearchPosts(ctx, "threads", SearchPostsOpts{})
+			return err
+		}},
 	}
 
 	for _, tt := range methods {

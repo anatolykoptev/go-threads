@@ -16,6 +16,7 @@ const (
 	docIDSingleThread    = "5587632691339264"
 	docIDGetThreadLikers = "9360915773983802"
 	docIDSearchUsers     = "27238810212443285"
+	docIDSearchPosts     = "28768213336137323"
 
 	// Private API paths (mobile / i.instagram.com)
 	pathPublishText = "/api/v1/media/configure_text_only_post/"
@@ -40,6 +41,21 @@ const (
 	pathBloksLogin     = "/api/v1/bloks/apps/com.bloks.www.bloks.caa.login.async.send_login_request/"
 
 	barcelonaUA = "Barcelona 289.0.0.77.109 Android"
+)
+
+// Post search (captured from threads.com/search). friendlySearchPosts is
+// BarcelonaSearchResultsQuery, the first-page query; pagination goes through a
+// separate Refetchable doc_id we do not need for a one-shot search. In
+// searchPostsVarsJSON the query and top/recent switch are placeholders —
+// searchPostsVariables overwrites them per call; the remaining
+// __relay_internal__pv__ feature flags are sent verbatim.
+const (
+	friendlySearchPosts   = "BarcelonaSearchResultsQuery"
+	searchPostsVarsJSON   = `{"meta_place_id":null,"power_search_info":null,"query":"","recent":0,"search_surface":"default","tagID":null,"trend_fbid":null,"__relay_internal__pv__BarcelonaHasSERPHeaderrelayprovider":false,"__relay_internal__pv__BarcelonaHasCommunitiesOrLoggedOutrelayprovider":true,"__relay_internal__pv__BarcelonaHasWebFaviconsrelayprovider":false,"__relay_internal__pv__BarcelonaHasCommunityGreenDotrelayprovider":false,"__relay_internal__pv__BarcelonaMessagesHasLiveChatMessagingrelayprovider":false,"__relay_internal__pv__BarcelonaHasCommunityTopContributorsrelayprovider":false,"__relay_internal__pv__BarcelonaHasCommunityBobbleheadsrelayprovider":true,"__relay_internal__pv__BarcelonaHasCommunityTrendingBadgingrelayprovider":false,"__relay_internal__pv__BarcelonaIsLoggedInrelayprovider":true,"__relay_internal__pv__BarcelonaShouldFetchPostAuthorFullNamerelayprovider":false,"__relay_internal__pv__BarcelonaHasDearAlgoConsumptionrelayprovider":true,"__relay_internal__pv__BarcelonaHasMetaAiContentAttachmentsrelayprovider":false,"__relay_internal__pv__BarcelonaHasEventBadgerelayprovider":false,"__relay_internal__pv__BarcelonaHasBestOfThreadsrelayprovider":false,"__relay_internal__pv__BarcelonaMessagingHasMetaAIBotrelayprovider":false,"__relay_internal__pv__BarcelonaGenAIRepliesEnabledrelayprovider":true,"__relay_internal__pv__BarcelonaIsSearchDiscoveryEnabledrelayprovider":false,"__relay_internal__pv__BarcelonaHasCommunitiesrelayprovider":true,"__relay_internal__pv__BarcelonaHasGameScoreSharerelayprovider":true,"__relay_internal__pv__BarcelonaHasPublicViewCountCardrelayprovider":true,"__relay_internal__pv__BarcelonaHasCommunityEmojiUpdateCardrelayprovider":true,"__relay_internal__pv__BarcelonaHasCommunityEntityCardrelayprovider":true,"__relay_internal__pv__BarcelonaHasScorecardCommunityrelayprovider":true,"__relay_internal__pv__BarcelonaHasSportTeamAllegianceCardrelayprovider":true,"__relay_internal__pv__BarcelonaHasMusicrelayprovider":true,"__relay_internal__pv__BarcelonaHasNewspaperLinkStylerelayprovider":false,"__relay_internal__pv__BarcelonaHasMessagingrelayprovider":true,"__relay_internal__pv__BarcelonaHasPodcastV2Consumptionrelayprovider":true,"__relay_internal__pv__BarcelonaHasPodcastTranscriptConsumptionrelayprovider":true,"__relay_internal__pv__BarcelonaOptionalCookiesEnabledrelayprovider":true,"__relay_internal__pv__BarcelonaShouldFulfillLightboxQueryrelayprovider":true,"__relay_internal__pv__BarcelonaCanSeeSponsoredContentrelayprovider":false,"__relay_internal__pv__BarcelonaIsCrawlerrelayprovider":false,"__relay_internal__pv__BarcelonaHasDearAlgoWebProductionrelayprovider":false,"__relay_internal__pv__BarcelonaHasViewerRepliedrelayprovider":true,"__relay_internal__pv__BarcelonaHasPrivateRepliesDeprecationrelayprovider":true,"__relay_internal__pv__BarcelonaHasGhostPostEmojiActivationrelayprovider":false,"__relay_internal__pv__BarcelonaShouldShowFediverseM075Featuresrelayprovider":true,"__relay_internal__pv__BarcelonaIsInternalUserrelayprovider":false}`
+	searchPostsQueryKey   = "query"
+	searchPostsModeKey    = "recent"
+	searchPostsModeTop    = 0
+	searchPostsModeRecent = 1
 )
 
 // threadsHeaderOrder is the header order for Threads requests.

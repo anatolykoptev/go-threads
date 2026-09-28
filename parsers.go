@@ -1,6 +1,7 @@
 package threads
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log/slog"
@@ -392,6 +393,68 @@ func parseLikers(body []byte) ([]*ThreadsUser, error) {
 		users = append(users, convertUser(ru))
 	}
 	return users, nil
+}
+
+// parseSearchPosts decodes the BarcelonaSearchResultsQuery response. The first
+// JSON value is the initial response; Meta may stream follow-up deltas after it.
+// An absent or empty edges list is a genuine zero-hit answer; a missing
+// container, or edges whose nested node shape carries no parseable thread
+// items, is a rotated schema — an error, never an empty result.
+func parseSearchPosts(body []byte) ([]*Thread, error) {
+	var raw struct {
+		Data *struct {
+			SearchResults *struct {
+				Edges []struct {
+					Node struct {
+						Thread struct {
+							ThreadItems []rawThreadItem `json:"thread_items"`
+						} `json:"thread"`
+					} `json:"node"`
+				} `json:"edges"`
+			} `json:"searchResults"`
+		} `json:"data"`
+		Errors []struct{ Message string } `json:"errors"`
+	}
+	if err := json.NewDecoder(bytes.NewReader(body)).Decode(&raw); err != nil {
+		return nil, fmt.Errorf("parse search posts: %w", err)
+	}
+	// Relay may return partial data alongside non-fatal errors; a usable
+	// edges list wins over the errors array.
+	if raw.Data != nil && raw.Data.SearchResults != nil {
+		var threads []*Thread
+		for _, edge := range raw.Data.SearchResults.Edges {
+			items := edge.Node.Thread.ThreadItems
+			if len(items) == 0 {
+				continue
+			}
+			t := &Thread{SourceMethod: "cdp"}
+			for i := range items {
+				if items[i].Post.Pk.String() == "" && items[i].Post.Code == "" {
+					continue
+				}
+				t.Items = append(t.Items, convertPost(items[i].Post))
+			}
+			if len(t.Items) > 0 {
+				threads = append(threads, t)
+			}
+		}
+		if len(threads) > 0 {
+			if len(raw.Errors) > 0 {
+				slog.Warn("threads: search posts partial data", slog.String("graphql_error", raw.Errors[0].Message))
+			}
+			return threads, nil
+		}
+		if len(raw.Data.SearchResults.Edges) > 0 {
+			return nil, ErrUnexpectedShape
+		}
+	}
+	if len(raw.Errors) > 0 {
+		return nil, fmt.Errorf("graphql: %s", raw.Errors[0].Message)
+	}
+	if raw.Data == nil || raw.Data.SearchResults == nil {
+		return nil, ErrUnexpectedShape
+	}
+	return nil, nil
 }
 
 // parseSearchUsers parses a SearchUsers GraphQL response.
