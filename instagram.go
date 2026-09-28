@@ -550,8 +550,10 @@ func (c *Client) getInstagramViaSSR(ctx context.Context, shortcode string) (*Thr
 		return nil, fmt.Errorf("fetch page: %w", err)
 	}
 
-	// Try Threads-compatible SSR parser
-	if thread, _, ssrErr := parseThreadFromSSR(html); ssrErr == nil && thread != nil && len(thread.Items) > 0 {
+	// Try Threads-compatible SSR parser. Edges-shape only: the media-fallback
+	// in parseThreadFromSSR is threads-post-page specific and would hijack IG
+	// pages that also embed {"media":...} relay blocks ahead of the IG probes.
+	if thread, _, ssrErr := parseThreadEdges(html); ssrErr == nil && thread != nil && len(thread.Items) > 0 {
 		return thread, nil
 	}
 

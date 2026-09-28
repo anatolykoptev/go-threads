@@ -68,7 +68,7 @@ func (m *mockChainFetcher) fetch(_ context.Context, _, code string) (*Thread, []
 // parsePage parses an SSR HTML page into (main, replies) and panics on error.
 func parsePage(t *testing.T, html []byte) (*Thread, []*Thread) {
 	t.Helper()
-	main, replies, err := parseThreadFromSSR(html)
+	main, replies, err := parseThreadFromSSR(html, "")
 	if err != nil {
 		t.Fatalf("parseThreadFromSSR: %v", err)
 	}

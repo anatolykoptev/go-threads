@@ -123,7 +123,7 @@ func (c *Client) GetThread(ctx context.Context, username, postCode string) (*Thr
 	if err != nil {
 		return nil, nil, fmt.Errorf("GetThread: %w", err)
 	}
-	return parseThreadFromSSR(html)
+	return parseThreadFromSSR(html, postCode)
 }
 
 // parseThreadFromSSR extracts a single thread + replies from SSR HTML.
@@ -132,11 +132,15 @@ func (c *Client) GetThread(ctx context.Context, username, postCode string) (*Thr
 //   - current (2026-09): {"media":<post>} for the main post and
 //     media.text_post_app_info.direct_replies.edges[].node.posts.edges[].node
 //     for replies, spread across several result.data blocks (issue #57).
-func parseThreadFromSSR(html []byte) (*Thread, []*Thread, error) {
+//
+// wantCode pins the media-path main post to the requested post code (""
+// disables the check — used by chain tests that drive parseThreadFromSSR on
+// captured pages).
+func parseThreadFromSSR(html []byte, wantCode string) (*Thread, []*Thread, error) {
 	if main, replies, err := parseThreadEdges(html); err == nil {
 		return main, replies, nil
 	}
-	return parseThreadMedia(html)
+	return parseThreadMedia(html, wantCode)
 }
 
 // parseThreadEdges handles the legacy thread_items shape: edge 0 is the main
@@ -217,11 +221,10 @@ type ssrPostTPAI struct {
 // main post at {"media":<post>}; reply chains live in separate media-fragment
 // blocks under text_post_app_info.direct_replies / pinned_replies, and the
 // author's continuation posts under self_thread.posts.
-func parseThreadMedia(html []byte) (*Thread, []*Thread, error) {
+func parseThreadMedia(html []byte, wantCode string) (*Thread, []*Thread, error) {
 	var mainPost *rawPost
 	var selfPosts []rawPost
-	var replies []*Thread
-	seenReply := map[string]bool{}
+	var pinned, direct []ssrPostEdge
 
 	for _, block := range extractSSRBlocks(html) {
 		var mb struct {
@@ -231,8 +234,13 @@ func parseThreadMedia(html []byte) (*Thread, []*Thread, error) {
 			continue
 		}
 		var rp rawPost
+		if json.Unmarshal(mb.Media, &rp) != nil {
+			continue
+		}
 		// Fragment blocks carry only {id, text_post_app_info} — no pk/code/user.
-		if json.Unmarshal(mb.Media, &rp) == nil && (rp.Pk.String() != "" || rp.Code != "") && mainPost == nil {
+		// The main post must carry the requested code when wantCode is set;
+		// without it any pk/code-bearing media block wins (first-wins).
+		if mainPost == nil && (wantCode == "" && (rp.Pk.String() != "" || rp.Code != "") || rp.Code == wantCode) {
 			mainPost = &rp
 		}
 		var tpai ssrPostTPAI
@@ -241,29 +249,17 @@ func parseThreadMedia(html []byte) (*Thread, []*Thread, error) {
 		}
 		if st := tpai.TextPostAppInfo.SelfThread; st != nil {
 			for _, e := range st.Posts.Edges {
+				if e.Node.Pk.String() == "" && e.Node.Code == "" {
+					continue
+				}
 				selfPosts = append(selfPosts, e.Node)
 			}
 		}
-		for _, list := range []*struct {
-			Edges []ssrPostEdge `json:"edges"`
-		}{tpai.TextPostAppInfo.PinnedReplies, tpai.TextPostAppInfo.DirectReplies} {
-			if list == nil {
-				continue
-			}
-			for _, edge := range list.Edges {
-				t := &Thread{}
-				key := ""
-				for _, pe := range edge.Node.Posts.Edges {
-					if key == "" {
-						key = pe.Node.Pk.String()
-					}
-					t.Items = append(t.Items, convertPost(pe.Node))
-				}
-				if len(t.Items) > 0 && !seenReply[key] {
-					seenReply[key] = true
-					replies = append(replies, t)
-				}
-			}
+		if r := tpai.TextPostAppInfo.PinnedReplies; r != nil {
+			pinned = append(pinned, r.Edges...)
+		}
+		if r := tpai.TextPostAppInfo.DirectReplies; r != nil {
+			direct = append(direct, r.Edges...)
 		}
 	}
 
@@ -276,6 +272,28 @@ func parseThreadMedia(html []byte) (*Thread, []*Thread, error) {
 			continue // self_thread can echo the main post
 		}
 		main.Items = append(main.Items, convertPost(rp))
+	}
+
+	// Pinned replies globally precede direct ones; dedupe across both lists
+	// (a pinned reply can also appear in direct_replies).
+	var replies []*Thread
+	seenReply := map[string]bool{}
+	for _, edge := range append(pinned, direct...) {
+		t := &Thread{}
+		key := ""
+		for _, pe := range edge.Node.Posts.Edges {
+			if pe.Node.Pk.String() == "" && pe.Node.Code == "" {
+				continue // relay tombstone/null node — same guard as parseSearchPosts
+			}
+			if key == "" {
+				key = pe.Node.Pk.String()
+			}
+			t.Items = append(t.Items, convertPost(pe.Node))
+		}
+		if len(t.Items) > 0 && !seenReply[key] {
+			seenReply[key] = true
+			replies = append(replies, t)
+		}
 	}
 	return main, replies, nil
 }
