@@ -2,6 +2,7 @@ package threads
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 	"time"
 )
@@ -138,6 +139,46 @@ func TestParseThreadFromSSR(t *testing.T) {
 		t.Errorf("reply text = %q", replies[0].Items[0].Text)
 	}
 	if !replies[0].Items[0].IsReply {
+		t.Error("reply.IsReply = false, want true")
+	}
+}
+
+// TestParseThreadFromSSR_PostPageMediaShape covers the CURRENT threads.com
+// post-page markup (captured live 2026-09-28, issue #57): the page no longer
+// embeds data.data.edges[].node.thread_items — the main post sits in a
+// {"media":<post>} block and replies under
+// media.text_post_app_info.direct_replies.edges[].node.posts.edges[].node.
+// Fixture is sanitized live HTML (token fields blanked, replies trimmed to 3).
+func TestParseThreadFromSSR_PostPageMediaShape(t *testing.T) {
+	html, err := os.ReadFile("testdata/thread_page_post.html")
+	if err != nil {
+		t.Fatalf("read fixture: %v", err)
+	}
+	main, replies, err := parseThreadFromSSR(html)
+	if err != nil {
+		t.Fatalf("parseThreadFromSSR: %v", err)
+	}
+	if len(main.Items) != 1 {
+		t.Fatalf("len(main.Items) = %d, want 1", len(main.Items))
+	}
+	m := main.Items[0]
+	if m.Code != "DV0De6jlB_v" {
+		t.Errorf("main.Code = %q, want DV0De6jlB_v", m.Code)
+	}
+	if m.Author.Username != "karpathy" {
+		t.Errorf("main.Author = %q, want karpathy", m.Author.Username)
+	}
+	if m.LikeCount != 232 {
+		t.Errorf("main.LikeCount = %d, want 232", m.LikeCount)
+	}
+	if len(replies) != 3 {
+		t.Fatalf("len(replies) = %d, want 3", len(replies))
+	}
+	r := replies[0].Items[0]
+	if r.Author.Username != "xioaib_" || r.Code != "DV0Ojg3Da_7" {
+		t.Errorf("reply[0] = %s/%s, want xioaib_/DV0Ojg3Da_7", r.Author.Username, r.Code)
+	}
+	if !r.IsReply {
 		t.Error("reply.IsReply = false, want true")
 	}
 }

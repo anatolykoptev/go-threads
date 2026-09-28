@@ -127,9 +127,21 @@ func (c *Client) GetThread(ctx context.Context, username, postCode string) (*Thr
 }
 
 // parseThreadFromSSR extracts a single thread + replies from SSR HTML.
-// The SSR structure is: data.data.edges[].node.thread_items[]
-// Edge 0 = main post, Edges 1+ = replies.
+// Two page shapes exist in the wild:
+//   - old: data.data.edges[].node.thread_items[] (edge 0 = main, 1+ = replies)
+//   - current (2026-09): {"media":<post>} for the main post and
+//     media.text_post_app_info.direct_replies.edges[].node.posts.edges[].node
+//     for replies, spread across several result.data blocks (issue #57).
 func parseThreadFromSSR(html []byte) (*Thread, []*Thread, error) {
+	if main, replies, err := parseThreadEdges(html); err == nil {
+		return main, replies, nil
+	}
+	return parseThreadMedia(html)
+}
+
+// parseThreadEdges handles the legacy thread_items shape: edge 0 is the main
+// post chain, edges 1+ are replies.
+func parseThreadEdges(html []byte) (*Thread, []*Thread, error) {
 	for _, block := range extractSSRBlocks(html) {
 		var probe struct {
 			Data *struct {
@@ -168,6 +180,104 @@ func parseThreadFromSSR(html []byte) (*Thread, []*Thread, error) {
 		return main, replies, nil
 	}
 	return nil, nil, fmt.Errorf("thread data not found in SSR HTML")
+}
+
+// ssrPostEdge wraps one reply-list edge: node.posts.edges[].node = rawPost.
+type ssrPostEdge struct {
+	Node struct {
+		Posts struct {
+			Edges []struct {
+				Node rawPost `json:"node"`
+			} `json:"edges"`
+		} `json:"posts"`
+	} `json:"node"`
+}
+
+// ssrPostTPAI is the text_post_app_info subtree that carries reply lists and
+// the author's self-thread continuation on post pages.
+type ssrPostTPAI struct {
+	TextPostAppInfo *struct {
+		DirectReplies *struct {
+			Edges []ssrPostEdge `json:"edges"`
+		} `json:"direct_replies"`
+		PinnedReplies *struct {
+			Edges []ssrPostEdge `json:"edges"`
+		} `json:"pinned_replies"`
+		SelfThread *struct {
+			Posts struct {
+				Edges []struct {
+					Node rawPost `json:"node"`
+				} `json:"edges"`
+			} `json:"posts"`
+		} `json:"self_thread"`
+	} `json:"text_post_app_info"`
+}
+
+// parseThreadMedia handles the current post-page shape: one block carries the
+// main post at {"media":<post>}; reply chains live in separate media-fragment
+// blocks under text_post_app_info.direct_replies / pinned_replies, and the
+// author's continuation posts under self_thread.posts.
+func parseThreadMedia(html []byte) (*Thread, []*Thread, error) {
+	var mainPost *rawPost
+	var selfPosts []rawPost
+	var replies []*Thread
+	seenReply := map[string]bool{}
+
+	for _, block := range extractSSRBlocks(html) {
+		var mb struct {
+			Media json.RawMessage `json:"media"`
+		}
+		if json.Unmarshal(block, &mb) != nil || mb.Media == nil {
+			continue
+		}
+		var rp rawPost
+		// Fragment blocks carry only {id, text_post_app_info} — no pk/code/user.
+		if json.Unmarshal(mb.Media, &rp) == nil && (rp.Pk.String() != "" || rp.Code != "") && mainPost == nil {
+			mainPost = &rp
+		}
+		var tpai ssrPostTPAI
+		if json.Unmarshal(mb.Media, &tpai) != nil || tpai.TextPostAppInfo == nil {
+			continue
+		}
+		if st := tpai.TextPostAppInfo.SelfThread; st != nil {
+			for _, e := range st.Posts.Edges {
+				selfPosts = append(selfPosts, e.Node)
+			}
+		}
+		for _, list := range []*struct {
+			Edges []ssrPostEdge `json:"edges"`
+		}{tpai.TextPostAppInfo.PinnedReplies, tpai.TextPostAppInfo.DirectReplies} {
+			if list == nil {
+				continue
+			}
+			for _, edge := range list.Edges {
+				t := &Thread{}
+				key := ""
+				for _, pe := range edge.Node.Posts.Edges {
+					if key == "" {
+						key = pe.Node.Pk.String()
+					}
+					t.Items = append(t.Items, convertPost(pe.Node))
+				}
+				if len(t.Items) > 0 && !seenReply[key] {
+					seenReply[key] = true
+					replies = append(replies, t)
+				}
+			}
+		}
+	}
+
+	if mainPost == nil {
+		return nil, nil, fmt.Errorf("thread data not found in SSR HTML")
+	}
+	main := &Thread{Items: []Post{convertPost(*mainPost)}}
+	for _, rp := range selfPosts {
+		if rp.Pk.String() == mainPost.Pk.String() {
+			continue // self_thread can echo the main post
+		}
+		main.Items = append(main.Items, convertPost(rp))
+	}
+	return main, replies, nil
 }
 
 // --- SSR-based GraphQL methods ---
