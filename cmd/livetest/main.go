@@ -27,6 +27,15 @@ func main() {
 	cfg.IGDID = os.Getenv("THREADS_IG_DID")
 	cfg.MID = os.Getenv("THREADS_MID")
 
+	// CDP transport via go-wowa: THREADS_WOWA_URL=http://<host>:8906,
+	// THREADS_CDP_PROXY=<residential proxy>, INTERNAL_SERVICE_SECRET.
+	cfg.WowaURL = os.Getenv("THREADS_WOWA_URL")
+	cfg.Proxy = os.Getenv("THREADS_CDP_PROXY")
+	cfg.InternalSecret = os.Getenv("INTERNAL_SERVICE_SECRET")
+	if cfg.WowaURL != "" {
+		cfg.Session = "livetest-threads"
+	}
+
 	if cfg.CSRFToken != "" {
 		fmt.Printf("Auth: cookies set (ds_user_id=%s)\n", cfg.DSUserID)
 	} else {
@@ -116,6 +125,26 @@ func main() {
 		fmt.Printf("  %d results\n", len(searchResults))
 		for i, u := range searchResults {
 			fmt.Printf("  [%d] @%s (%s) verified=%v followers=%d\n", i, u.Username, u.FullName, u.IsVerified, u.FollowerCount)
+		}
+	}
+
+	// Keyword post search via the CDP transport (THREADS_WOWA_URL required).
+	if query := os.Getenv("THREADS_SEARCH"); query != "" {
+		for _, mode := range []threads.SearchMode{threads.SearchTop, threads.SearchRecent} {
+			fmt.Printf("\n=== SearchPosts %q mode=%s ===\n", query, mode)
+			found, err := client.SearchPosts(ctx, query, threads.SearchPostsOpts{Mode: mode, Count: 5})
+			if err != nil {
+				fmt.Printf("  ERROR: %v\n", err)
+				continue
+			}
+			fmt.Printf("  %d threads\n", len(found))
+			for i, t := range found {
+				if len(t.Items) == 0 {
+					continue
+				}
+				p := t.Items[0]
+				fmt.Printf("  [%d] @%s %s likes=%d %q\n", i, p.Author.Username, p.CreatedAt.UTC().Format(time.RFC3339), p.LikeCount, trunc(p.Text, 60))
+			}
 		}
 	}
 

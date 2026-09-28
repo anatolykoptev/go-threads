@@ -5,6 +5,10 @@ import (
 	"fmt"
 )
 
+// ErrUnexpectedShape means the response parsed as JSON but carried none of the
+// expected containers — typically a rotated doc_id or a changed schema.
+var ErrUnexpectedShape = errors.New("threads: unexpected response shape")
+
 // errorClass categorizes HTTP error responses.
 type errorClass int
 

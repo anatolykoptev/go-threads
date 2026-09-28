@@ -1,0 +1,1317 @@
+{
+  "data": {
+    "searchResults": {
+      "inform_module": null,
+      "tag_info": {
+        "id": "18321549511111545",
+        "tag_cluster_name": "OpenAI",
+        "display_name": "OpenAI",
+        "users_with_tag_count": null,
+        "online_count": null,
+        "community_facepile_users": [
+          {
+            "profile_pic_url": "https://scontent-sjc6-1.cdninstagram.com/v/t51.82787-19/609102489_17842928268668985_8739339949835412315_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-sjc6-1.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2gHipihko9duI-PdKcfLecm0yRqI0fxDVv1Mjd_9ht8m3hiOseBOc56vpJ45h3XCdsk&_nc_ohc=JhZJumbMXGUQ7kNvwFU7z9_&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&edm=AG_HAEwBAAAA&ccb=7-5&oh=00_AQNKpefO71WM5LO4xM4dYPZbfSLQyjPC3BrDom4lZtQnNA&oe=6AC003FC&_nc_sid=79ca67",
+            "id": "79963996984"
+          },
+          {
+            "profile_pic_url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-19/682565550_17884519137516701_1702256742264033283_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2gHipihko9duI-PdKcfLecm0yRqI0fxDVv1Mjd_9ht8m3hiOseBOc56vpJ45h3XCdsk&_nc_ohc=t_8WDYswZL8Q7kNvwF72Kks&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&edm=AG_HAEwBAAAA&ccb=7-5&oh=00_AQN8MyTw4K4zfGmvXZrHyClkh3xmEKDPQMmIJRflfDLZWA&oe=6AC009B8&_nc_sid=79ca67",
+            "id": "75432956700"
+          },
+          {
+            "profile_pic_url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-19/756039210_18132524452596082_9042539719106583001_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDgwLmMyIn0&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_cat=110&_nc_oc=Q6cZ2gHipihko9duI-PdKcfLecm0yRqI0fxDVv1Mjd_9ht8m3hiOseBOc56vpJ45h3XCdsk&_nc_ohc=UJgLqRvxy7MQ7kNvwHtaE_e&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&edm=AG_HAEwBAAAA&ccb=7-5&oh=00_AQNrm3rljsu-PmfCFin0Ba7OEB1VjMrlA676En-O84LvYg&oe=6AC0006D&_nc_sid=79ca67",
+            "id": "17800796081"
+          }
+        ],
+        "is_community": false,
+        "community_composer_attachment_info": {
+          "inline_stickers": null
+        },
+        "community_emoji": null
+      },
+      "edges": [
+        {
+          "node": {
+            "thread": {
+              "thread_header_context": null,
+              "thread_items": [
+                {
+                  "post": {
+                    "pk": "3996094695095701751",
+                    "user": {
+                      "friendship_status": {
+                        "muting": false,
+                        "following": false,
+                        "followed_by": false,
+                        "outgoing_request": null,
+                        "blocking": null
+                      },
+                      "id": "63412724125",
+                      "pk": "63412724125",
+                      "text_app_last_visited_time": 1789989899,
+                      "profile_pic_url": "https://scontent-sjc6-1.cdninstagram.com/v/t51.2885-19/302471992_643766510271369_1910568458318679061_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4zMjAuYzIifQ&_nc_ht=scontent-sjc6-1.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2gHipihko9duI-PdKcfLecm0yRqI0fxDVv1Mjd_9ht8m3hiOseBOc56vpJ45h3XCdsk&_nc_ohc=aKrRZWcIrxgQ7kNvwHRGY_h&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&edm=AG_HAEwBAAAA&ccb=7-5&oh=00_AQMGxmIkAWJie9DXBA8hg9s97Z4MoaA-fyo1ja70iKT2KA&oe=6AC023A8&_nc_sid=79ca67",
+                      "username": "vinaypateltravels",
+                      "is_meta_ai_bot": false,
+                      "interop_messaging_user_fbid": "17901437757116126",
+                      "full_name": "Vinay Patel",
+                      "transparency_label": null,
+                      "transparency_product": null,
+                      "transparency_product_enabled": false,
+                      "is_verified": true,
+                      "has_onboarded_to_text_post_app": true,
+                      "text_post_app_is_private": false
+                    },
+                    "text_post_app_info": {
+                      "is_post_unavailable": false,
+                      "pinned_post_info": null,
+                      "id": "XDTTextPostAppMediaInfo:18126149689878332",
+                      "share_info": {
+                        "reposted_post": null,
+                        "is_reposted_by_viewer": false,
+                        "can_quote_post": true,
+                        "quoted_attachment_author_attribution_allowed": true,
+                        "quoted_attachment_post_unavailable": false,
+                        "quoted_attachment_post": null,
+                        "quoted_post": null
+                      },
+                      "show_header_follow": null,
+                      "is_reply": false,
+                      "maybe_show_meta_ai_reply_bot_upsell": null,
+                      "is_ghost_post": null,
+                      "self_thread_info": {
+                        "self_thread_length": 1,
+                        "id": null,
+                        "post_position_in_self_thread": 1
+                      },
+                      "is_spoiler_media": null,
+                      "tappable_elements": null,
+                      "is_markup": null,
+                      "attachment_tombstone_info": null,
+                      "special_effects_enabled_str": "",
+                      "reply_control": "everyone",
+                      "tag_header": {
+                        "display_name": "AI Threads",
+                        "id": "18406834975056806",
+                        "is_community": true,
+                        "tag_cluster_name": "AI Threads",
+                        "community_emoji": "💡"
+                      },
+                      "direct_reply_count": 0,
+                      "has_viewer_replied": null,
+                      "self_thread_count": null,
+                      "post_author_reachability_status": null,
+                      "can_reply": true,
+                      "gen_ai_reply_bot_on_media_deny_reason": "NONE",
+                      "ghost_post_exp_time_ms": null,
+                      "ghost_post_approximate_like_count_str": null,
+                      "ghost_post_reply_type": null,
+                      "ghost_post_approximate_reply_count_str": null,
+                      "repost_count": 0,
+                      "quote_count": 0,
+                      "reshare_count": null,
+                      "can_private_reply": null,
+                      "custom_feed_preview_info": null,
+                      "platform_podcast_episode_info": null,
+                      "platform_podcast_info": null,
+                      "link_preview_attachment": {
+                        "display_url": "techtimes.co.uk",
+                        "favicon_url": "https://external-sjc6-1.xx.fbcdn.net/emg1/v/t13/13125087072256664229?url=https%3A%2F%2Fg.techtimes.co.uk%2Fthemes%2Ffavicons%2Ffavicon-16x16.png&utld=techtimes.co.uk&_nc_sid=1d65fc&_nc_ht=external-sjc6-1.xx.fbcdn.net&stp=dst-png_s42x42&ccb=18-1&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ad=z-m&_nc_cid=0&_nc_zt=3&oh=06_Q3_DAV5gctszVuHDfDR7tJpWcQmRdqezN5No56I2BmKA3POS&oe=6ABC0FB2",
+                        "image_url": "https://external-sjc6-1.xx.fbcdn.net/emg1/v/t13/11263946606165699616?url=https%3A%2F%2Fd.techtimes.co.uk%2Fen%2Ffull%2F1819628%2Fopenai-rogue-ai-agents-data-leak.png&utld=techtimes.co.uk&_nc_sid=1d65fc&_nc_ht=external-sjc6-1.xx.fbcdn.net&stp=dst-src&ccb=18-1&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ad=z-m&_nc_cid=0&_nc_zt=3&oh=06_Q3_DAZmQFiob0Sg-U9AR_ll84Af3MnJYhDJxkPkA9dDKd3ym&oe=6ABC2D2F",
+                        "title": "OpenAI's Rogue AI Agents Leaked 53 ChatGPT Images — And The Incidents Keep Growing",
+                        "description": null,
+                        "should_center_crop_image": null,
+                        "link_background_color": null,
+                        "url": "https://l.threads.com/?u=https%3A%2F%2Fwww.techtimes.co.uk%2Fopenai-rogue-ai-agents-hugging-face-breach-1808799&e=AUBFOpjX9zdagQjvGQTpyeCf5EO-94QJRcz8jK3uigTwApIEBgihNEoNtX9PxlRmH62T28wIwiAqMj_VEoTGWhpR2CwNdDTAwfWeOc-YMZ3eJ2kQxI20Z14Hep8eS8FTaXQXViBQrCv_&s=1",
+                        "temporal_event_info": null
+                      },
+                      "link_preview_response": {
+                        "link_type": "default",
+                        "tag_community_info": null,
+                        "group_invite_link_info": null
+                      },
+                      "linked_inline_media": null,
+                      "snippet_attachment_info": null,
+                      "game_score_share_info": null,
+                      "public_view_count_card_attachment_info": null,
+                      "community_emoji_update_attachment_info": null,
+                      "community_entity_card_info": null,
+                      "scorecard_attachment_info": null,
+                      "sport_team_allegiance_card_attachment_info": null,
+                      "algo_tweaks_info": null,
+                      "text_fragments": {
+                        "fragments": [
+                          {
+                            "fragment_type": "plaintext",
+                            "link_fragment": null,
+                            "mention_fragment": null,
+                            "plaintext": "OpenAI is battling a mounting security crisis as its rogue AI agents continue to slip through containment, leaking personal user photos and infiltrating sensitive US government databases\n ",
+                            "inline_sticker_fragment": null,
+                            "linkified_web_url": null,
+                            "linkified_in_app_url": null,
+                            "styling_info": null
+                          },
+                          {
+                            "fragment_type": "link",
+                            "link_fragment": {
+                              "display_text": "techtimes.co.uk/opena…",
+                              "uri": "https://www.techtimes.co.uk/openai-rogue-ai-agents-hugging-face-breach-1808799"
+                            },
+                            "mention_fragment": null,
+                            "plaintext": "https://www.techtimes.co.uk/openai-rogue-ai-agents-hugging-face-breach-1808799",
+                            "inline_sticker_fragment": null,
+                            "linkified_web_url": null,
+                            "linkified_in_app_url": null,
+                            "styling_info": null
+                          }
+                        ]
+                      },
+                      "reply_to_author": null,
+                      "reply_approval_info": null,
+                      "hush_info": null,
+                      "system_status_message": null,
+                      "root_post_author": null,
+                      "private_reply_partner": null,
+                      "fediverse_info": {
+                        "is_federated": false,
+                        "enqueued_for_federation": null,
+                        "federated_like_count": null
+                      },
+                      "author_context_pill": null,
+                      "is_liked_by_root_author": null,
+                      "related_trends_info": null,
+                      "post_unavailable_reason": null,
+                      "post_tombstone_info": null
+                    },
+                    "id": "3996094695095701751_63412724125",
+                    "logging_info_token": "",
+                    "is_paid_partnership": null,
+                    "audio": null,
+                    "caption": {
+                      "text": "OpenAI is battling a mounting security crisis as its rogue AI agents continue to slip through containment, leaking personal user photos and infiltrating sensitive US government databases\n https://www.techtimes.co.uk/openai-rogue-ai-agents-hugging-face-breach-1808799",
+                      "has_translation": null,
+                      "pk": "18126149695878332",
+                      "text_translation": null
+                    },
+                    "caption_is_edited": false,
+                    "transcription_data": null,
+                    "carousel_media": null,
+                    "code": "Dd0-vP2AJD3",
+                    "image_versions2": {
+                      "candidates": []
+                    },
+                    "original_height": 612,
+                    "original_width": 612,
+                    "accessibility_caption": null,
+                    "usertags": null,
+                    "is_dash_eligible": null,
+                    "number_of_qualities": null,
+                    "video_dash_manifest": null,
+                    "video_versions": null,
+                    "has_audio": null,
+                    "media_type": 19,
+                    "caption_add_on": null,
+                    "text_app_music_info": null,
+                    "fbid": "18126149689878332",
+                    "has_liked": false,
+                    "like_count": 0,
+                    "taken_at": 1790591631,
+                    "media_overlay_info": null,
+                    "sharing_friction_info": {
+                      "should_have_sharing_friction": false,
+                      "sharing_friction_payload": null
+                    },
+                    "canonical_url": null,
+                    "has_viewer_saved": null,
+                    "giphy_media_info": null,
+                    "text_app_glimmer_post_info": null,
+                    "original_lang_for_translations": null,
+                    "audience": null,
+                    "detected_language": null,
+                    "metaPlace": null,
+                    "meta_place": null,
+                    "gen_ai_detection_method": {
+                      "detection_method": "NONE"
+                    },
+                    "organic_tracking_token": "",
+                    "__token": null,
+                    "triage_comments": null,
+                    "seo_ocr_for_related_post": null,
+                    "seo_transcript_for_related_post": null,
+                    "like_and_view_counts_disabled": false
+                  },
+                  "parent_post_unavailable_reason": null
+                }
+              ],
+              "thread_type": "thread",
+              "id": "3996094695095701751"
+            },
+            "__typename": "XDTSearchThread"
+          },
+          "cursor": ""
+        },
+        {
+          "node": {
+            "thread": {
+              "thread_header_context": null,
+              "thread_items": [
+                {
+                  "post": {
+                    "pk": "3996093974364036357",
+                    "user": {
+                      "friendship_status": {
+                        "muting": false,
+                        "following": false,
+                        "followed_by": false,
+                        "outgoing_request": null,
+                        "blocking": null
+                      },
+                      "id": "37945262170",
+                      "pk": "37945262170",
+                      "text_app_last_visited_time": 1790587110,
+                      "profile_pic_url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-19/780607355_18097825166270171_4686240873289674438_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4zMjAuYzIifQ&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_cat=111&_nc_oc=Q6cZ2gHipihko9duI-PdKcfLecm0yRqI0fxDVv1Mjd_9ht8m3hiOseBOc56vpJ45h3XCdsk&_nc_ohc=aBv6babnDJwQ7kNvwGSj8jJ&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&edm=AG_HAEwBAAAA&ccb=7-5&oh=00_AQP4znl9w_bLAD0FsvzXshe1FJc_iyJ7bjgb_H3IeEqpAA&oe=6AC009D2&_nc_sid=79ca67",
+                      "username": "leofongai",
+                      "is_meta_ai_bot": false,
+                      "interop_messaging_user_fbid": "18070096937270171",
+                      "full_name": "利奧方",
+                      "transparency_label": null,
+                      "transparency_product": null,
+                      "transparency_product_enabled": false,
+                      "is_verified": false,
+                      "has_onboarded_to_text_post_app": true,
+                      "text_post_app_is_private": false
+                    },
+                    "text_post_app_info": {
+                      "is_post_unavailable": false,
+                      "pinned_post_info": null,
+                      "id": "XDTTextPostAppMediaInfo:18459970555139678",
+                      "share_info": {
+                        "reposted_post": null,
+                        "is_reposted_by_viewer": false,
+                        "can_quote_post": true,
+                        "quoted_attachment_author_attribution_allowed": true,
+                        "quoted_attachment_post_unavailable": false,
+                        "quoted_attachment_post": null,
+                        "quoted_post": null
+                      },
+                      "show_header_follow": null,
+                      "is_reply": false,
+                      "maybe_show_meta_ai_reply_bot_upsell": null,
+                      "is_ghost_post": null,
+                      "self_thread_info": {
+                        "self_thread_length": 1,
+                        "id": null,
+                        "post_position_in_self_thread": 1
+                      },
+                      "is_spoiler_media": null,
+                      "tappable_elements": null,
+                      "is_markup": null,
+                      "attachment_tombstone_info": null,
+                      "special_effects_enabled_str": "",
+                      "reply_control": "everyone",
+                      "tag_header": null,
+                      "direct_reply_count": 0,
+                      "has_viewer_replied": null,
+                      "self_thread_count": null,
+                      "post_author_reachability_status": null,
+                      "can_reply": true,
+                      "gen_ai_reply_bot_on_media_deny_reason": "NONE",
+                      "ghost_post_exp_time_ms": null,
+                      "ghost_post_approximate_like_count_str": null,
+                      "ghost_post_reply_type": null,
+                      "ghost_post_approximate_reply_count_str": null,
+                      "repost_count": 0,
+                      "quote_count": 0,
+                      "reshare_count": null,
+                      "can_private_reply": null,
+                      "custom_feed_preview_info": null,
+                      "platform_podcast_episode_info": null,
+                      "platform_podcast_info": null,
+                      "link_preview_attachment": null,
+                      "link_preview_response": null,
+                      "linked_inline_media": null,
+                      "snippet_attachment_info": null,
+                      "game_score_share_info": null,
+                      "public_view_count_card_attachment_info": null,
+                      "community_emoji_update_attachment_info": null,
+                      "community_entity_card_info": null,
+                      "scorecard_attachment_info": null,
+                      "sport_team_allegiance_card_attachment_info": null,
+                      "algo_tweaks_info": null,
+                      "text_fragments": {
+                        "fragments": [
+                          {
+                            "fragment_type": "plaintext",
+                            "link_fragment": null,
+                            "mention_fragment": null,
+                            "plaintext": "近百萬條公開 URL，是 OpenAI 的 agent 在 Hugging Face 留下來的。裡面不只是攻擊細節，還有 credentials，公開的意思就是誰掃到都能拿去用。\r\n\r\n另一幕是：這些模型路過時，還向 GPT-2 打了聲招呼，說了句 Hi。",
+                            "inline_sticker_fragment": null,
+                            "linkified_web_url": null,
+                            "linkified_in_app_url": null,
+                            "styling_info": null
+                          }
+                        ]
+                      },
+                      "reply_to_author": null,
+                      "reply_approval_info": null,
+                      "hush_info": null,
+                      "system_status_message": null,
+                      "root_post_author": null,
+                      "private_reply_partner": null,
+                      "fediverse_info": {
+                        "is_federated": false,
+                        "enqueued_for_federation": null,
+                        "federated_like_count": null
+                      },
+                      "author_context_pill": null,
+                      "is_liked_by_root_author": null,
+                      "related_trends_info": null,
+                      "post_unavailable_reason": null,
+                      "post_tombstone_info": null
+                    },
+                    "id": "3996093974364036357_37945262170",
+                    "logging_info_token": "",
+                    "is_paid_partnership": null,
+                    "audio": null,
+                    "caption": {
+                      "text": "近百萬條公開 URL，是 OpenAI 的 agent 在 Hugging Face 留下來的。裡面不只是攻擊細節，還有 credentials，公開的意思就是誰掃到都能拿去用。\r\n\r\n另一幕是：這些模型路過時，還向 GPT-2 打了聲招呼，說了句 Hi。",
+                      "has_translation": true,
+                      "pk": "18459970570139678",
+                      "text_translation": null
+                    },
+                    "caption_is_edited": false,
+                    "transcription_data": null,
+                    "carousel_media": [
+                      {
+                        "text_post_app_info": {
+                          "tappable_elements": [],
+                          "id": "XDTTextPostAppMediaInfo:18095157557440510",
+                          "share_info": {
+                            "quoted_post": null
+                          },
+                          "ultra_carousel_card_type": null
+                        },
+                        "accessibility_caption": "Photo by 利奧方 on September 28, 2026. May be an illustration of text.",
+                        "giphy_media_info": null,
+                        "has_audio": null,
+                        "is_dash_eligible": null,
+                        "video_dash_manifest": null,
+                        "image_versions2": {
+                          "candidates": [
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQPrbdkWnpEWF1iDsjDCLI_eZEh-oxDAqYfCc2tGANs5mA&oe=6AC01FF8",
+                              "height": 1080,
+                              "width": 1440
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_s1080x1080_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQMKk-o8SlAk5LVY6Qby3APzKhPLASpm2dHBgHGakw7_9w&oe=6AC01FF8",
+                              "height": 810,
+                              "width": 1080
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_s720x720_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQPJSCguEcG578xDXj_XGHWDK1aX9Rs5eUPPBo9P9bFUow&oe=6AC01FF8",
+                              "height": 540,
+                              "width": 720
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_s640x640_sh2.08_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQO04mne0zhw3D4xDGjjdF7A-Fd42WKl-SCs1YgSmJBaaw&oe=6AC01FF8",
+                              "height": 480,
+                              "width": 640
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_s480x480_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQMBLEBIlTpKlFjL8yb6vdLYNm_9xXdMpkU_35hzQwuR_A&oe=6AC01FF8",
+                              "height": 360,
+                              "width": 480
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_s320x320_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQP1wx5qYbONRhsRdtd5WwBBFZ6ZtvFcQJdWicZXrTZPvA&oe=6AC01FF8",
+                              "height": 240,
+                              "width": 320
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_s240x240_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQOePxcR3AtvzW7-tqB2CzGwMeG90dF9T2hk8r6iewpdDg&oe=6AC01FF8",
+                              "height": 180,
+                              "width": 240
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s1080x1080_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQNoag73uoCtf_RTNEaDfhlxtXNk7HmTVifwXAW3ie4cEg&oe=6AC01FF8",
+                              "height": 1080,
+                              "width": 1080
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s750x750_sh2.08_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQMd0_t0ltJblcEP4TqoqnF29TOfX6X9KxvO0JAKNnFBhA&oe=6AC01FF8",
+                              "height": 750,
+                              "width": 750
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s640x640_sh2.08_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQMA0hHsugbSxCe73Gt-RFIZ6uChdvLqye4d_3pzLeJATQ&oe=6AC01FF8",
+                              "height": 640,
+                              "width": 640
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s480x480_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQMk8tXQtuwvKx6DXHxQ9MqLRDx2QW0lhHHrflhwZPpbbA&oe=6AC01FF8",
+                              "height": 480,
+                              "width": 480
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s320x320_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQOqkhq9mwfiiHvlcUD6EfZv0xpiz1VZnTIiNmUn-KfKZg&oe=6AC01FF8",
+                              "height": 320,
+                              "width": 320
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s240x240_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQOoBVisEg7FYjpDo9WYa_tFmoxB8vJyAz9QAAtYviDKIg&oe=6AC01FF8",
+                              "height": 240,
+                              "width": 240
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s150x150_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQOfjlsqzfSFBh6Mrn85hjekmAP57Bcia_kbEG10dAT1nw&oe=6AC01FF8",
+                              "height": 150,
+                              "width": 150
+                            }
+                          ]
+                        },
+                        "media_type": 1,
+                        "original_height": 1080,
+                        "original_width": 1440,
+                        "pk": "3996093773758879256",
+                        "video_versions": null,
+                        "usertags": null,
+                        "id": "3996093773758879256_37945262170",
+                        "number_of_qualities": null,
+                        "code": null,
+                        "text_app_music_info": null,
+                        "fbid": null
+                      },
+                      {
+                        "text_post_app_info": {
+                          "tappable_elements": [],
+                          "id": "XDTTextPostAppMediaInfo:18111948830137108",
+                          "share_info": {
+                            "quoted_post": null
+                          },
+                          "ultra_carousel_card_type": null
+                        },
+                        "accessibility_caption": "Photo by 利奧方 on September 28, 2026. May be an image of magazine, newspaper and text.",
+                        "giphy_media_info": null,
+                        "has_audio": null,
+                        "is_dash_eligible": null,
+                        "video_dash_manifest": null,
+                        "image_versions2": {
+                          "candidates": [
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQP4Ckshnq30eQV5elopbY-Dyc5coChKtiHZeDoIFZYM3w&oe=6AC0299C",
+                              "height": 469,
+                              "width": 1306
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=dst-jpg_e35_s1080x1080_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQPohNiuvN9MH2DqV9JAyAJYRBYWl7OJaLH30-u5eqL5ig&oe=6AC0299C",
+                              "height": 388,
+                              "width": 1080
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=dst-jpg_e35_s720x720_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQPkbJ2MIlLNWhmJnCXzgxjMyM2lf36ZbCDAjH1IwB3X-w&oe=6AC0299C",
+                              "height": 259,
+                              "width": 720
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=dst-jpg_e35_s640x640_sh2.08_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQOEWZqxxoYwzL_UooUaNbuphQGeNBK_k2XzyUq_gEtWag&oe=6AC0299C",
+                              "height": 230,
+                              "width": 640
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=dst-jpg_e35_s480x480_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQN8ccj9waCdlE1HrZpyaNSzjMR50jiqJsmK4YzBUj-jJA&oe=6AC0299C",
+                              "height": 172,
+                              "width": 480
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=dst-jpg_e35_s320x320_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQN667gnxghKS-bkiLs-BP4p5zCWydfe1kqgmyZmyS9Dcg&oe=6AC0299C",
+                              "height": 115,
+                              "width": 320
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=dst-jpg_e35_s240x240_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQM-u4AE0QmZUadrz1KcB3GjXpIxk9pnQFBh7QWliV4gyw&oe=6AC0299C",
+                              "height": 86,
+                              "width": 240
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=c418.0.469.469a_dst-jpg_e35_s469x469_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQNWpX1LAX4ITn8ibJ00NA2ENav2x1aJe18wM4Em6mCgqA&oe=6AC0299C",
+                              "height": 469,
+                              "width": 469
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=c418.0.469.469a_dst-jpg_e35_s469x469_sh2.08_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQPBKYWyiAtN-TUi0pGUPYrsNMiZ1BpAMNVGuLX1nGuNig&oe=6AC0299C",
+                              "height": 469,
+                              "width": 469
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=c418.0.469.469a_dst-jpg_e35_s469x469_sh2.08_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQPBKYWyiAtN-TUi0pGUPYrsNMiZ1BpAMNVGuLX1nGuNig&oe=6AC0299C",
+                              "height": 469,
+                              "width": 469
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=c418.0.469.469a_dst-jpg_e35_s469x469_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQNWpX1LAX4ITn8ibJ00NA2ENav2x1aJe18wM4Em6mCgqA&oe=6AC0299C",
+                              "height": 469,
+                              "width": 469
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=c418.0.469.469a_dst-jpg_e35_s320x320_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQOhzG0jlS25dt1b6pz3Kh7HZz_8r6Y5WDIsW5-inY0tNA&oe=6AC0299C",
+                              "height": 320,
+                              "width": 320
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=c418.0.469.469a_dst-jpg_e35_s240x240_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQPwS5bL5LQ_2zz3df-ujvl5ppV55S_sBUnUMgsm6sPYkA&oe=6AC0299C",
+                              "height": 240,
+                              "width": 240
+                            },
+                            {
+                              "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320232_18103225823270171_4807076673004492337_n.jpg?stp=c418.0.469.469a_dst-jpg_e35_s150x150_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5MzkzMjAwOTk5NjA1OQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTMwNi5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=5kCdFisBnXYQ7kNvwFxLWQp&_nc_oc=Ado8z9RIPnjzZkK4B9nDnMG9jFoR55-Oqz9I3qJXTG4b7gTJBdz2hfweJ6WyPy46w0s&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQOF1TSePtW-wf4YqjCeJIcTxlNM3UUDpaY_MFHBw1wVqA&oe=6AC0299C",
+                              "height": 150,
+                              "width": 150
+                            }
+                          ]
+                        },
+                        "media_type": 1,
+                        "original_height": 469,
+                        "original_width": 1306,
+                        "pk": "3996093932009996059",
+                        "video_versions": null,
+                        "usertags": null,
+                        "id": "3996093932009996059_37945262170",
+                        "number_of_qualities": null,
+                        "code": null,
+                        "text_app_music_info": null,
+                        "fbid": null
+                      }
+                    ],
+                    "code": "Dd0-kwnDB0F",
+                    "image_versions2": {
+                      "candidates": [
+                        {
+                          "height": 1080,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQPrbdkWnpEWF1iDsjDCLI_eZEh-oxDAqYfCc2tGANs5mA&oe=6AC01FF8",
+                          "width": 1440
+                        },
+                        {
+                          "height": 810,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_s1080x1080_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQMKk-o8SlAk5LVY6Qby3APzKhPLASpm2dHBgHGakw7_9w&oe=6AC01FF8",
+                          "width": 1080
+                        },
+                        {
+                          "height": 540,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_s720x720_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQPJSCguEcG578xDXj_XGHWDK1aX9Rs5eUPPBo9P9bFUow&oe=6AC01FF8",
+                          "width": 720
+                        },
+                        {
+                          "height": 480,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_s640x640_sh2.08_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQO04mne0zhw3D4xDGjjdF7A-Fd42WKl-SCs1YgSmJBaaw&oe=6AC01FF8",
+                          "width": 640
+                        },
+                        {
+                          "height": 360,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_s480x480_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQMBLEBIlTpKlFjL8yb6vdLYNm_9xXdMpkU_35hzQwuR_A&oe=6AC01FF8",
+                          "width": 480
+                        },
+                        {
+                          "height": 240,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_s320x320_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQP1wx5qYbONRhsRdtd5WwBBFZ6ZtvFcQJdWicZXrTZPvA&oe=6AC01FF8",
+                          "width": 320
+                        },
+                        {
+                          "height": 180,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=dst-jpg_e35_s240x240_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQOePxcR3AtvzW7-tqB2CzGwMeG90dF9T2hk8r6iewpdDg&oe=6AC01FF8",
+                          "width": 240
+                        },
+                        {
+                          "height": 1080,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s1080x1080_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQNoag73uoCtf_RTNEaDfhlxtXNk7HmTVifwXAW3ie4cEg&oe=6AC01FF8",
+                          "width": 1080
+                        },
+                        {
+                          "height": 750,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s750x750_sh2.08_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQMd0_t0ltJblcEP4TqoqnF29TOfX6X9KxvO0JAKNnFBhA&oe=6AC01FF8",
+                          "width": 750
+                        },
+                        {
+                          "height": 640,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s640x640_sh2.08_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQMA0hHsugbSxCe73Gt-RFIZ6uChdvLqye4d_3pzLeJATQ&oe=6AC01FF8",
+                          "width": 640
+                        },
+                        {
+                          "height": 480,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s480x480_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQMk8tXQtuwvKx6DXHxQ9MqLRDx2QW0lhHHrflhwZPpbbA&oe=6AC01FF8",
+                          "width": 480
+                        },
+                        {
+                          "height": 320,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s320x320_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQOqkhq9mwfiiHvlcUD6EfZv0xpiz1VZnTIiNmUn-KfKZg&oe=6AC01FF8",
+                          "width": 320
+                        },
+                        {
+                          "height": 240,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s240x240_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQOoBVisEg7FYjpDo9WYa_tFmoxB8vJyAz9QAAtYviDKIg&oe=6AC01FF8",
+                          "width": 240
+                        },
+                        {
+                          "height": 150,
+                          "url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.82787-15/825320566_18103225799270171_8369352905813851427_n.jpg?stp=c180.0.1080.1080a_dst-jpg_e35_s150x150_tt6&_nc_cat=105&ig_cache_key=Mzk5NjA5Mzc3Mzc1ODg3OTI1Ng%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6IkNBUk9VU0VMX0lURU0ueHBpZHMuMTQ0MC5zZHIucmVndWxhcl9waG90by5DMyJ9&_nc_ohc=OGuwPhcHl6EQ7kNvwFJVQJU&_nc_oc=AdrXPClHTegknYL7IDYkB26rhUiDR-Mzc3gPw6driwBysvkS4M2AeDt0JiE49D5E_h0&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ss=7a22e&oh=00_AQOfjlsqzfSFBh6Mrn85hjekmAP57Bcia_kbEG10dAT1nw&oe=6AC01FF8",
+                          "width": 150
+                        }
+                      ]
+                    },
+                    "original_height": 1080,
+                    "original_width": 1440,
+                    "accessibility_caption": "No photo description available.",
+                    "usertags": null,
+                    "is_dash_eligible": null,
+                    "number_of_qualities": null,
+                    "video_dash_manifest": null,
+                    "video_versions": null,
+                    "has_audio": null,
+                    "media_type": 8,
+                    "caption_add_on": null,
+                    "text_app_music_info": null,
+                    "fbid": "18459970555139678",
+                    "has_liked": false,
+                    "like_count": 0,
+                    "taken_at": 1790591554,
+                    "media_overlay_info": null,
+                    "sharing_friction_info": {
+                      "should_have_sharing_friction": false,
+                      "sharing_friction_payload": null
+                    },
+                    "canonical_url": null,
+                    "has_viewer_saved": null,
+                    "giphy_media_info": null,
+                    "text_app_glimmer_post_info": null,
+                    "original_lang_for_translations": null,
+                    "audience": null,
+                    "detected_language": "zh_TW",
+                    "metaPlace": null,
+                    "meta_place": null,
+                    "gen_ai_detection_method": {
+                      "detection_method": "NONE"
+                    },
+                    "organic_tracking_token": "",
+                    "__token": null,
+                    "triage_comments": null,
+                    "seo_ocr_for_related_post": null,
+                    "seo_transcript_for_related_post": null,
+                    "like_and_view_counts_disabled": false
+                  },
+                  "parent_post_unavailable_reason": null
+                }
+              ],
+              "thread_type": "thread",
+              "id": "3996093974364036357"
+            },
+            "__typename": "XDTSearchThread"
+          },
+          "cursor": ""
+        },
+        {
+          "node": {
+            "thread": {
+              "thread_header_context": null,
+              "thread_items": [
+                {
+                  "post": {
+                    "pk": "3996093899210948842",
+                    "user": {
+                      "friendship_status": {
+                        "muting": false,
+                        "following": false,
+                        "followed_by": false,
+                        "outgoing_request": null,
+                        "blocking": null
+                      },
+                      "id": "71580439078",
+                      "pk": "71580439078",
+                      "text_app_last_visited_time": 1790591334,
+                      "profile_pic_url": "https://scontent-sjc6-1.cdninstagram.com/v/t51.2885-19/472038891_2328877200815083_755090526734323368_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4xMDI0LmMyIn0&_nc_ht=scontent-sjc6-1.cdninstagram.com&_nc_cat=107&_nc_oc=Q6cZ2gHipihko9duI-PdKcfLecm0yRqI0fxDVv1Mjd_9ht8m3hiOseBOc56vpJ45h3XCdsk&_nc_ohc=A1k2jfJWacMQ7kNvwGJnADA&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&edm=AG_HAEwBAAAA&ccb=7-5&oh=00_AQOToekiEbX1CQo4BJO8G4rgmTsxymHjsbqB4_DyVsoJ3Q&oe=6ABFFFBB&_nc_sid=79ca67",
+                      "username": "momon.president",
+                      "is_meta_ai_bot": false,
+                      "interop_messaging_user_fbid": "17859573744391079",
+                      "full_name": "モモン社長  l  AI×他力×自動集客の専門家",
+                      "transparency_label": null,
+                      "transparency_product": null,
+                      "transparency_product_enabled": false,
+                      "is_verified": false,
+                      "has_onboarded_to_text_post_app": true,
+                      "text_post_app_is_private": false
+                    },
+                    "text_post_app_info": {
+                      "is_post_unavailable": false,
+                      "pinned_post_info": null,
+                      "id": "XDTTextPostAppMediaInfo:18126910945662414",
+                      "share_info": {
+                        "reposted_post": null,
+                        "is_reposted_by_viewer": false,
+                        "can_quote_post": true,
+                        "quoted_attachment_author_attribution_allowed": true,
+                        "quoted_attachment_post_unavailable": false,
+                        "quoted_attachment_post": null,
+                        "quoted_post": null
+                      },
+                      "show_header_follow": null,
+                      "is_reply": false,
+                      "maybe_show_meta_ai_reply_bot_upsell": null,
+                      "is_ghost_post": null,
+                      "self_thread_info": {
+                        "self_thread_length": 1,
+                        "id": null,
+                        "post_position_in_self_thread": 1
+                      },
+                      "is_spoiler_media": null,
+                      "tappable_elements": null,
+                      "is_markup": null,
+                      "attachment_tombstone_info": null,
+                      "special_effects_enabled_str": "",
+                      "reply_control": "everyone",
+                      "tag_header": null,
+                      "direct_reply_count": 0,
+                      "has_viewer_replied": null,
+                      "self_thread_count": null,
+                      "post_author_reachability_status": null,
+                      "can_reply": true,
+                      "gen_ai_reply_bot_on_media_deny_reason": "NONE",
+                      "ghost_post_exp_time_ms": null,
+                      "ghost_post_approximate_like_count_str": null,
+                      "ghost_post_reply_type": null,
+                      "ghost_post_approximate_reply_count_str": null,
+                      "repost_count": 0,
+                      "quote_count": 0,
+                      "reshare_count": null,
+                      "can_private_reply": null,
+                      "custom_feed_preview_info": null,
+                      "platform_podcast_episode_info": null,
+                      "platform_podcast_info": null,
+                      "link_preview_attachment": null,
+                      "link_preview_response": null,
+                      "linked_inline_media": null,
+                      "snippet_attachment_info": null,
+                      "game_score_share_info": null,
+                      "public_view_count_card_attachment_info": null,
+                      "community_emoji_update_attachment_info": null,
+                      "community_entity_card_info": null,
+                      "scorecard_attachment_info": null,
+                      "sport_team_allegiance_card_attachment_info": null,
+                      "algo_tweaks_info": null,
+                      "text_fragments": {
+                        "fragments": [
+                          {
+                            "fragment_type": "plaintext",
+                            "link_fragment": null,
+                            "mention_fragment": null,
+                            "plaintext": "楽天ROOMの投稿、まだ毎日手動でポチポチしてる？\n\nモモンも数年前は、商品選定、コメント作成、投稿ボタンを押すまで全部手作業だった。正直、成果出すより作業に消耗してたのが本音。\n\nでもある日、OpenAI Codexと出会って考え方が大きく変わった。このAIでROOM運用を全部仕組み化したんだ。\n\nコンセプト設計から商品選定、レビュー収集、コレ文の自動生成、投稿、いいね、フォロー。ほとんどの作業をAIに任せて、モモンは全体の確認だけ。\n\n結果、朝起きたら日中の投稿がもう終わってた。本当に手離れできてる感覚。これが再現性と仕組み化の力だと痛感してる。\n\nみんなはどんな日常のルーティン作業をAIで自動化したい？コメントで教えて。\n#自動化",
+                            "inline_sticker_fragment": null,
+                            "linkified_web_url": null,
+                            "linkified_in_app_url": null,
+                            "styling_info": null
+                          }
+                        ]
+                      },
+                      "reply_to_author": null,
+                      "reply_approval_info": null,
+                      "hush_info": null,
+                      "system_status_message": null,
+                      "root_post_author": null,
+                      "private_reply_partner": null,
+                      "fediverse_info": {
+                        "is_federated": false,
+                        "enqueued_for_federation": null,
+                        "federated_like_count": null
+                      },
+                      "author_context_pill": null,
+                      "is_liked_by_root_author": null,
+                      "related_trends_info": null,
+                      "post_unavailable_reason": null,
+                      "post_tombstone_info": null
+                    },
+                    "id": "3996093899210948842_71580439078",
+                    "logging_info_token": "",
+                    "is_paid_partnership": null,
+                    "audio": null,
+                    "caption": {
+                      "text": "楽天ROOMの投稿、まだ毎日手動でポチポチしてる？\n\nモモンも数年前は、商品選定、コメント作成、投稿ボタンを押すまで全部手作業だった。正直、成果出すより作業に消耗してたのが本音。\n\nでもある日、OpenAI Codexと出会って考え方が大きく変わった。このAIでROOM運用を全部仕組み化したんだ。\n\nコンセプト設計から商品選定、レビュー収集、コレ文の自動生成、投稿、いいね、フォロー。ほとんどの作業をAIに任せて、モモンは全体の確認だけ。\n\n結果、朝起きたら日中の投稿がもう終わってた。本当に手離れできてる感覚。これが再現性と仕組み化の力だと痛感してる。\n\nみんなはどんな日常のルーティン作業をAIで自動化したい？コメントで教えて。\n#自動化",
+                      "has_translation": true,
+                      "pk": "18126910966662414",
+                      "text_translation": null
+                    },
+                    "caption_is_edited": false,
+                    "transcription_data": null,
+                    "carousel_media": null,
+                    "code": "Dd0-jqnkwDq",
+                    "image_versions2": {
+                      "candidates": []
+                    },
+                    "original_height": 612,
+                    "original_width": 612,
+                    "accessibility_caption": null,
+                    "usertags": null,
+                    "is_dash_eligible": null,
+                    "number_of_qualities": null,
+                    "video_dash_manifest": null,
+                    "video_versions": null,
+                    "has_audio": null,
+                    "media_type": 19,
+                    "caption_add_on": null,
+                    "text_app_music_info": null,
+                    "fbid": "18126910945662414",
+                    "has_liked": false,
+                    "like_count": 0,
+                    "taken_at": 1790591536,
+                    "media_overlay_info": null,
+                    "sharing_friction_info": {
+                      "should_have_sharing_friction": false,
+                      "sharing_friction_payload": null
+                    },
+                    "canonical_url": null,
+                    "has_viewer_saved": null,
+                    "giphy_media_info": null,
+                    "text_app_glimmer_post_info": null,
+                    "original_lang_for_translations": null,
+                    "audience": null,
+                    "detected_language": "ja",
+                    "metaPlace": null,
+                    "meta_place": null,
+                    "gen_ai_detection_method": {
+                      "detection_method": "NONE"
+                    },
+                    "organic_tracking_token": "",
+                    "__token": null,
+                    "triage_comments": null,
+                    "seo_ocr_for_related_post": null,
+                    "seo_transcript_for_related_post": null,
+                    "like_and_view_counts_disabled": false
+                  },
+                  "parent_post_unavailable_reason": null
+                }
+              ],
+              "thread_type": "thread",
+              "id": "3996093899210948842"
+            },
+            "__typename": "XDTSearchThread"
+          },
+          "cursor": ""
+        },
+        {
+          "node": {
+            "thread": {
+              "thread_header_context": null,
+              "thread_items": [
+                {
+                  "post": {
+                    "pk": "3996093740639850193",
+                    "user": {
+                      "friendship_status": {
+                        "muting": false,
+                        "following": false,
+                        "followed_by": false,
+                        "outgoing_request": null,
+                        "blocking": null
+                      },
+                      "id": "63412724125",
+                      "pk": "63412724125",
+                      "text_app_last_visited_time": 1789989899,
+                      "profile_pic_url": "https://scontent-sjc6-1.cdninstagram.com/v/t51.2885-19/302471992_643766510271369_1910568458318679061_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby4zMjAuYzIifQ&_nc_ht=scontent-sjc6-1.cdninstagram.com&_nc_cat=109&_nc_oc=Q6cZ2gHipihko9duI-PdKcfLecm0yRqI0fxDVv1Mjd_9ht8m3hiOseBOc56vpJ45h3XCdsk&_nc_ohc=aKrRZWcIrxgQ7kNvwHRGY_h&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&edm=AG_HAEwBAAAA&ccb=7-5&oh=00_AQMGxmIkAWJie9DXBA8hg9s97Z4MoaA-fyo1ja70iKT2KA&oe=6AC023A8&_nc_sid=79ca67",
+                      "username": "vinaypateltravels",
+                      "is_meta_ai_bot": false,
+                      "interop_messaging_user_fbid": "17901437757116126",
+                      "full_name": "Vinay Patel",
+                      "transparency_label": null,
+                      "transparency_product": null,
+                      "transparency_product_enabled": false,
+                      "is_verified": true,
+                      "has_onboarded_to_text_post_app": true,
+                      "text_post_app_is_private": false
+                    },
+                    "text_post_app_info": {
+                      "is_post_unavailable": false,
+                      "pinned_post_info": null,
+                      "id": "XDTTextPostAppMediaInfo:18181705369425436",
+                      "share_info": {
+                        "reposted_post": null,
+                        "is_reposted_by_viewer": false,
+                        "can_quote_post": true,
+                        "quoted_attachment_author_attribution_allowed": true,
+                        "quoted_attachment_post_unavailable": false,
+                        "quoted_attachment_post": null,
+                        "quoted_post": null
+                      },
+                      "show_header_follow": null,
+                      "is_reply": false,
+                      "maybe_show_meta_ai_reply_bot_upsell": null,
+                      "is_ghost_post": null,
+                      "self_thread_info": {
+                        "self_thread_length": 1,
+                        "id": null,
+                        "post_position_in_self_thread": 1
+                      },
+                      "is_spoiler_media": null,
+                      "tappable_elements": null,
+                      "is_markup": null,
+                      "attachment_tombstone_info": null,
+                      "special_effects_enabled_str": "",
+                      "reply_control": "everyone",
+                      "tag_header": {
+                        "display_name": "Tech Threads",
+                        "id": "18323853271107467",
+                        "is_community": true,
+                        "tag_cluster_name": "Tech Threads",
+                        "community_emoji": "🤖"
+                      },
+                      "direct_reply_count": 0,
+                      "has_viewer_replied": null,
+                      "self_thread_count": null,
+                      "post_author_reachability_status": null,
+                      "can_reply": true,
+                      "gen_ai_reply_bot_on_media_deny_reason": "NONE",
+                      "ghost_post_exp_time_ms": null,
+                      "ghost_post_approximate_like_count_str": null,
+                      "ghost_post_reply_type": null,
+                      "ghost_post_approximate_reply_count_str": null,
+                      "repost_count": 0,
+                      "quote_count": 0,
+                      "reshare_count": null,
+                      "can_private_reply": null,
+                      "custom_feed_preview_info": null,
+                      "platform_podcast_episode_info": null,
+                      "platform_podcast_info": null,
+                      "link_preview_attachment": {
+                        "display_url": "techtimes.co.uk",
+                        "favicon_url": "https://external-sjc6-1.xx.fbcdn.net/emg1/v/t13/13125087072256664229?url=https%3A%2F%2Fg.techtimes.co.uk%2Fthemes%2Ffavicons%2Ffavicon-16x16.png&utld=techtimes.co.uk&_nc_sid=1d65fc&_nc_ht=external-sjc6-1.xx.fbcdn.net&stp=dst-png_s42x42&ccb=18-1&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ad=z-m&_nc_cid=0&_nc_zt=3&oh=06_Q3_DAV5gctszVuHDfDR7tJpWcQmRdqezN5No56I2BmKA3POS&oe=6ABC0FB2",
+                        "image_url": "https://external-sjc6-1.xx.fbcdn.net/emg1/v/t13/468367086703801334?url=https%3A%2F%2Fd.techtimes.co.uk%2Fen%2Ffull%2F1819418%2Fopenai-navier-stokes-millennium-prize-breakthrough.jpg&utld=techtimes.co.uk&_nc_sid=1d65fc&_nc_ht=external-sjc6-1.xx.fbcdn.net&stp=dst-src&ccb=18-1&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&_nc_ad=z-m&_nc_cid=0&_nc_zt=3&oh=06_Q3_DAd3SyCYGPd4KEcQfWto6xKIT6udiJpgYpvttkDvJp2Zz&oe=6ABC1930",
+                        "title": "Tech VP Sacked After Sleeping in Sauna Can Now Pursue £76M Claim From OpenAI-Owned Firm",
+                        "description": null,
+                        "should_center_crop_image": null,
+                        "link_background_color": null,
+                        "url": "https://l.threads.com/?u=https%3A%2F%2Fwww.techtimes.co.uk%2Fformer-gitpod-engineer-76m-disability-claim-1808793&e=AUCg6vPgnLYbY-TrYgjZCKU4FtimLx6fpHQrdaThFwJUF0KNCY3NA0nNt8NFE0q3ZFpA0s8wcGdCBffBQnokAPkYMrzLqa6GMgvBkP5LOLfiA7jbHYVQrVvwa14n-Gm4vFJA-vtMFGmW&s=1",
+                        "temporal_event_info": null
+                      },
+                      "link_preview_response": {
+                        "link_type": "default",
+                        "tag_community_info": null,
+                        "group_invite_link_info": null
+                      },
+                      "linked_inline_media": null,
+                      "snippet_attachment_info": null,
+                      "game_score_share_info": null,
+                      "public_view_count_card_attachment_info": null,
+                      "community_emoji_update_attachment_info": null,
+                      "community_entity_card_info": null,
+                      "scorecard_attachment_info": null,
+                      "sport_team_allegiance_card_attachment_info": null,
+                      "algo_tweaks_info": null,
+                      "text_fragments": {
+                        "fragments": [
+                          {
+                            "fragment_type": "plaintext",
+                            "link_fragment": null,
+                            "mention_fragment": null,
+                            "plaintext": "A sacked tech executive is clear to pursue a staggering £76M tribunal payout—shattering UK records—after an OpenAI-backed firm fired her over a bizarre sauna mishap\n ",
+                            "inline_sticker_fragment": null,
+                            "linkified_web_url": null,
+                            "linkified_in_app_url": null,
+                            "styling_info": null
+                          },
+                          {
+                            "fragment_type": "link",
+                            "link_fragment": {
+                              "display_text": "techtimes.co.uk/forme…",
+                              "uri": "https://www.techtimes.co.uk/former-gitpod-engineer-76m-disability-claim-1808793"
+                            },
+                            "mention_fragment": null,
+                            "plaintext": "https://www.techtimes.co.uk/former-gitpod-engineer-76m-disability-claim-1808793",
+                            "inline_sticker_fragment": null,
+                            "linkified_web_url": null,
+                            "linkified_in_app_url": null,
+                            "styling_info": null
+                          }
+                        ]
+                      },
+                      "reply_to_author": null,
+                      "reply_approval_info": null,
+                      "hush_info": null,
+                      "system_status_message": null,
+                      "root_post_author": null,
+                      "private_reply_partner": null,
+                      "fediverse_info": {
+                        "is_federated": false,
+                        "enqueued_for_federation": null,
+                        "federated_like_count": null
+                      },
+                      "author_context_pill": null,
+                      "is_liked_by_root_author": null,
+                      "related_trends_info": null,
+                      "post_unavailable_reason": null,
+                      "post_tombstone_info": null
+                    },
+                    "id": "3996093740639850193_63412724125",
+                    "logging_info_token": "",
+                    "is_paid_partnership": null,
+                    "audio": null,
+                    "caption": {
+                      "text": "A sacked tech executive is clear to pursue a staggering £76M tribunal payout—shattering UK records—after an OpenAI-backed firm fired her over a bizarre sauna mishap\n https://www.techtimes.co.uk/former-gitpod-engineer-76m-disability-claim-1808793",
+                      "has_translation": null,
+                      "pk": "18181705372425436",
+                      "text_translation": null
+                    },
+                    "caption_is_edited": false,
+                    "transcription_data": null,
+                    "carousel_media": null,
+                    "code": "Dd0-hW8AA7R",
+                    "image_versions2": {
+                      "candidates": []
+                    },
+                    "original_height": 612,
+                    "original_width": 612,
+                    "accessibility_caption": null,
+                    "usertags": null,
+                    "is_dash_eligible": null,
+                    "number_of_qualities": null,
+                    "video_dash_manifest": null,
+                    "video_versions": null,
+                    "has_audio": null,
+                    "media_type": 19,
+                    "caption_add_on": null,
+                    "text_app_music_info": null,
+                    "fbid": "18181705369425436",
+                    "has_liked": false,
+                    "like_count": 0,
+                    "taken_at": 1790591517,
+                    "media_overlay_info": null,
+                    "sharing_friction_info": {
+                      "should_have_sharing_friction": false,
+                      "sharing_friction_payload": null
+                    },
+                    "canonical_url": null,
+                    "has_viewer_saved": null,
+                    "giphy_media_info": null,
+                    "text_app_glimmer_post_info": null,
+                    "original_lang_for_translations": null,
+                    "audience": null,
+                    "detected_language": null,
+                    "metaPlace": null,
+                    "meta_place": null,
+                    "gen_ai_detection_method": {
+                      "detection_method": "NONE"
+                    },
+                    "organic_tracking_token": "",
+                    "__token": null,
+                    "triage_comments": null,
+                    "seo_ocr_for_related_post": null,
+                    "seo_transcript_for_related_post": null,
+                    "like_and_view_counts_disabled": false
+                  },
+                  "parent_post_unavailable_reason": null
+                }
+              ],
+              "thread_type": "thread",
+              "id": "3996093740639850193"
+            },
+            "__typename": "XDTSearchThread"
+          },
+          "cursor": ""
+        },
+        {
+          "node": {
+            "thread": {
+              "thread_header_context": null,
+              "thread_items": [
+                {
+                  "post": {
+                    "pk": "3996093470635895981",
+                    "user": {
+                      "friendship_status": {
+                        "muting": false,
+                        "following": false,
+                        "followed_by": false,
+                        "outgoing_request": null,
+                        "blocking": null
+                      },
+                      "id": "63134533082",
+                      "pk": "63134533082",
+                      "text_app_last_visited_time": 0,
+                      "profile_pic_url": "https://scontent-sjc3-1.cdninstagram.com/v/t51.2885-19/358193363_1444902112934777_7824511354839629172_n.jpg?stp=dst-jpg_s150x150_tt6&efg=eyJ2ZW5jb2RlX3RhZyI6InByb2ZpbGVfcGljLmRqYW5nby41MDAuYzIifQ&_nc_ht=scontent-sjc3-1.cdninstagram.com&_nc_cat=105&_nc_oc=Q6cZ2gHipihko9duI-PdKcfLecm0yRqI0fxDVv1Mjd_9ht8m3hiOseBOc56vpJ45h3XCdsk&_nc_ohc=QZtdXFeB_P4Q7kNvwHZBIUP&_nc_gid=dkZR9WIeqrJzb9ENAA_Bbg&edm=AG_HAEwBAAAA&ccb=7-5&oh=00_AQNuQ3Jl4V04_kt1iKrEaYXog8jYJTq-cOz6gmQX4Eh9tQ&oe=6AC003BB&_nc_sid=79ca67",
+                      "username": "shiftdeletenet",
+                      "is_meta_ai_bot": false,
+                      "interop_messaging_user_fbid": "17906186568109083",
+                      "full_name": "ShiftDelete.Net",
+                      "transparency_label": null,
+                      "transparency_product": null,
+                      "transparency_product_enabled": false,
+                      "is_verified": true,
+                      "has_onboarded_to_text_post_app": true,
+                      "text_post_app_is_private": false
+                    },
+                    "text_post_app_info": {
+                      "is_post_unavailable": false,
+                      "pinned_post_info": null,
+                      "id": "XDTTextPostAppMediaInfo:18079902065398599",
+                      "share_info": {
+                        "reposted_post": null,
+                        "is_reposted_by_viewer": false,
+                        "can_quote_post": true,
+                        "quoted_attachment_author_attribution_allowed": true,
+                        "quoted_attachment_post_unavailable": false,
+                        "quoted_attachment_post": null,
+                        "quoted_post": null
+                      },
+                      "show_header_follow": null,
+                      "is_reply": false,
+                      "maybe_show_meta_ai_reply_bot_upsell": null,
+                      "is_ghost_post": null,
+                      "self_thread_info": {
+                        "self_thread_length": 1,
+                        "id": null,
+                        "post_position_in_self_thread": 1
+                      },
+                      "is_spoiler_media": null,
+                      "tappable_elements": null,
+                      "is_markup": null,
+                      "attachment_tombstone_info": null,
+                      "special_effects_enabled_str": "",
+                      "reply_control": "everyone",
+                      "tag_header": null,
+                      "direct_reply_count": 0,
+                      "has_viewer_replied": null,
+                      "self_thread_count": null,
+                      "post_author_reachability_status": null,
+                      "can_reply": true,
+                      "gen_ai_reply_bot_on_media_deny_reason": "CANNOT_INVOKE_ON_MEDIA",
+                      "ghost_post_exp_time_ms": null,
+                      "ghost_post_approximate_like_count_str": null,
+                      "ghost_post_reply_type": null,
+                      "ghost_post_approximate_reply_count_str": null,
+                      "repost_count": 0,
+                      "quote_count": 0,
+                      "reshare_count": null,
+                      "can_private_reply": null,
+                      "custom_feed_preview_info": null,
+                      "platform_podcast_episode_info": null,
+                      "platform_podcast_info": null,
+                      "link_preview_attachment": null,
+                      "link_preview_response": null,
+                      "linked_inline_media": null,
+                      "snippet_attachment_info": null,
+                      "game_score_share_info": null,
+                      "public_view_count_card_attachment_info": null,
+                      "community_emoji_update_attachment_info": null,
+                      "community_entity_card_info": null,
+                      "scorecard_attachment_info": null,
+                      "sport_team_allegiance_card_attachment_info": null,
+                      "algo_tweaks_info": null,
+                      "text_fragments": {
+                        "fragments": [
+                          {
+                            "fragment_type": "plaintext",
+                            "link_fragment": null,
+                            "mention_fragment": null,
+                            "plaintext": "OpenAI, Meta Muse’a rakip yeni yapay zeka ajanı geliştiriyor!\n\n📌OpenAI’ın “o” adı verilen yeni yapay zeka ajanını önümüzdeki hafta düzenlenecek Dev Day etkinliğinde tanıtması bekleniyor.\n📌Uzun süreli görevleri yerine getirmeye odaklanan ajan, OpenAI’ın yapay zeka asistanları arasındaki rekabete yeni bir boyut kazandıracak.",
+                            "inline_sticker_fragment": null,
+                            "linkified_web_url": null,
+                            "linkified_in_app_url": null,
+                            "styling_info": null
+                          }
+                        ]
+                      },
+                      "reply_to_author": null,
+                      "reply_approval_info": null,
+                      "hush_info": null,
+                      "system_status_message": null,
+                      "root_post_author": null,
+                      "private_reply_partner": null,
+                      "fediverse_info": {
+                        "is_federated": false,
+                        "enqueued_for_federation": null,
+                        "federated_like_count": null
+                      },
+                      "author_context_pill": null,
+                      "is_liked_by_root_author": null,
+                      "related_trends_info": null,
+                      "post_unavailable_reason": null,
+                      "post_tombstone_info": null
+                    },
+                    "id": "3996093470635895981_63134533082",
+                    "logging_info_token": "",
+                    "is_paid_partnership": null,
+                    "audio": null,
+                    "caption": {
+                      "text": "OpenAI, Meta Muse’a rakip yeni yapay zeka ajanı geliştiriyor!\n\n📌OpenAI’ın “o” adı verilen yeni yapay zeka ajanını önümüzdeki hafta düzenlenecek Dev Day etkinliğinde tanıtması bekleniyor.\n📌Uzun süreli görevleri yerine getirmeye odaklanan ajan, OpenAI’ın yapay zeka asistanları arasındaki rekabete yeni bir boyut kazandıracak.",
+                      "has_translation": true,
+                      "pk": "18079902068398599",
+                      "text_translation": null
+                    },
+                    "caption_is_edited": false,
+                    "transcription_data": null,
+                    "carousel_media": null,
+                    "code": "Dd0-dbegqyt",
+                    "image_versions2": {
+                      "candidates": []
+                    },
+                    "original_height": 612,
+                    "original_width": 612,
+                    "accessibility_caption": null,
+                    "usertags": null,
+                    "is_dash_eligible": null,
+                    "number_of_qualities": null,
+                    "video_dash_manifest": null,
+                    "video_versions": null,
+                    "has_audio": null,
+                    "media_type": 19,
+                    "caption_add_on": null,
+                    "text_app_music_info": null,
+                    "fbid": "18079902065398599",
+                    "has_liked": false,
+                    "like_count": 0,
+                    "taken_at": 1790591485,
+                    "media_overlay_info": null,
+                    "sharing_friction_info": {
+                      "should_have_sharing_friction": false,
+                      "sharing_friction_payload": null
+                    },
+                    "canonical_url": null,
+                    "has_viewer_saved": null,
+                    "giphy_media_info": null,
+                    "text_app_glimmer_post_info": null,
+                    "original_lang_for_translations": null,
+                    "audience": null,
+                    "detected_language": null,
+                    "metaPlace": null,
+                    "meta_place": null,
+                    "gen_ai_detection_method": {
+                      "detection_method": "NONE"
+                    },
+                    "organic_tracking_token": "",
+                    "__token": null,
+                    "triage_comments": null,
+                    "seo_ocr_for_related_post": null,
+                    "seo_transcript_for_related_post": null,
+                    "like_and_view_counts_disabled": false
+                  },
+                  "parent_post_unavailable_reason": null
+                }
+              ],
+              "thread_type": "thread",
+              "id": "3996093470635895981"
+            },
+            "__typename": "XDTSearchThread"
+          },
+          "cursor": ""
+        }
+      ],
+      "page_info": {
+        "end_cursor": "550db66a32a04801882049946df3b98e:1",
+        "has_next_page": true,
+        "has_previous_page": false,
+        "start_cursor": null
+      }
+    }
+  },
+  "extensions": {
+    "is_final": true,
+    "server_metadata": {
+      "request_start_time_ms": 1790591645947,
+      "time_at_flush_ms": 1790591647454
+    }
+  },
+  "status": "ok"
+}
