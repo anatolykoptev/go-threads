@@ -418,33 +418,43 @@ func parseSearchPosts(body []byte) ([]*Thread, error) {
 	if err := json.NewDecoder(bytes.NewReader(body)).Decode(&raw); err != nil {
 		return nil, fmt.Errorf("parse search posts: %w", err)
 	}
+	// Relay may return partial data alongside non-fatal errors; a usable
+	// edges list wins over the errors array.
+	if raw.Data != nil && raw.Data.SearchResults != nil {
+		var threads []*Thread
+		for _, edge := range raw.Data.SearchResults.Edges {
+			items := edge.Node.Thread.ThreadItems
+			if len(items) == 0 {
+				continue
+			}
+			t := &Thread{SourceMethod: "cdp"}
+			for i := range items {
+				if items[i].Post.Pk.String() == "" && items[i].Post.Code == "" {
+					continue
+				}
+				t.Items = append(t.Items, convertPost(items[i].Post))
+			}
+			if len(t.Items) > 0 {
+				threads = append(threads, t)
+			}
+		}
+		if len(threads) > 0 {
+			if len(raw.Errors) > 0 {
+				slog.Warn("threads: search posts partial data", slog.String("graphql_error", raw.Errors[0].Message))
+			}
+			return threads, nil
+		}
+		if len(raw.Data.SearchResults.Edges) > 0 {
+			return nil, ErrUnexpectedShape
+		}
+	}
 	if len(raw.Errors) > 0 {
 		return nil, fmt.Errorf("graphql: %s", raw.Errors[0].Message)
 	}
 	if raw.Data == nil || raw.Data.SearchResults == nil {
 		return nil, ErrUnexpectedShape
 	}
-	var threads []*Thread
-	for _, edge := range raw.Data.SearchResults.Edges {
-		items := edge.Node.Thread.ThreadItems
-		if len(items) == 0 {
-			continue
-		}
-		t := &Thread{SourceMethod: "cdp"}
-		for i := range items {
-			if items[i].Post.Pk.String() == "" && items[i].Post.Code == "" {
-				continue
-			}
-			t.Items = append(t.Items, convertPost(items[i].Post))
-		}
-		if len(t.Items) > 0 {
-			threads = append(threads, t)
-		}
-	}
-	if len(raw.Data.SearchResults.Edges) > 0 && len(threads) == 0 {
-		return nil, ErrUnexpectedShape
-	}
-	return threads, nil
+	return nil, nil
 }
 
 // parseSearchUsers parses a SearchUsers GraphQL response.

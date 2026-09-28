@@ -67,6 +67,7 @@ client.Follow(ctx, "user_id")
 | `Follow` / `Unfollow` | Follow/unfollow |
 | `GetUserFollowers` / `GetUserFollowing` | Follower/following lists |
 | `SearchUsers` | Search by query |
+| `SearchPosts` | Keyword post search (requires `Config.WowaURL`; no Private API fallback) |
 
 ## Types
 

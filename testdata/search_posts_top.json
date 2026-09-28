@@ -1209,7 +1209,7 @@
         }
       ],
       "page_info": {
-        "end_cursor": "9fb4a6f3a87f4403b0a8add445539c6f:2",
+        "end_cursor": "",
         "has_next_page": true,
         "has_previous_page": false,
         "start_cursor": null

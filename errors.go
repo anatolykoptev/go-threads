@@ -21,6 +21,7 @@ const (
 	errLoginRedirect            // 200 but body contains login redirect
 	errChallenge                // 200 with a small JSON challenge/login envelope
 	errLoginRequired            // pinned tab has no sessionid cookie (logged out)
+	errClientError              // any other non-2xx status (e.g. 400 on a rotated doc_id)
 )
 
 // classifyHTTPStatus maps an HTTP status code to an error class.
@@ -37,7 +38,7 @@ func classifyHTTPStatus(status int) errorClass {
 	case status >= 500:
 		return errServerError
 	default:
-		return errNone
+		return errClientError
 	}
 }
 

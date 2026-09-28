@@ -30,6 +30,11 @@ func (c *Client) SearchPosts(ctx context.Context, query string, opts SearchPosts
 	if query == "" {
 		return nil, fmt.Errorf("SearchPosts: empty query")
 	}
+	switch opts.Mode {
+	case "", SearchTop, SearchRecent:
+	default:
+		return nil, fmt.Errorf("SearchPosts: unknown mode %q", opts.Mode)
+	}
 	if c.wowa == nil {
 		return nil, fmt.Errorf("SearchPosts: WowaURL not configured — keyword post search has no Private API fallback")
 	}
@@ -53,6 +58,9 @@ func (c *Client) SearchPosts(ctx context.Context, query string, opts SearchPosts
 func searchPostsVariables(query string, mode SearchMode) map[string]any {
 	var vars map[string]any
 	_ = json.Unmarshal([]byte(searchPostsVarsJSON), &vars)
+	if vars == nil {
+		vars = map[string]any{}
+	}
 	vars[searchPostsQueryKey] = query
 	if mode == SearchRecent {
 		vars[searchPostsModeKey] = searchPostsModeRecent

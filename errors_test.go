@@ -19,8 +19,8 @@ func TestClassifyHTTPStatus(t *testing.T) {
 		{500, errServerError},
 		{502, errServerError},
 		{503, errServerError},
-		{400, errNone}, // unclassified
-		{301, errNone}, // unclassified
+		{400, errClientError},
+		{301, errClientError},
 	}
 
 	for _, tt := range tests {

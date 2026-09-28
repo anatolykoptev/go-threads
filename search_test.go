@@ -97,6 +97,32 @@ func TestSearchPosts_EmptyQueryRejected(t *testing.T) {
 	}
 }
 
+func TestSearchPosts_UnknownModeRejected(t *testing.T) {
+	c, _ := searchClient(t, `{}`)
+	if _, err := c.SearchPosts(context.Background(), "openai", SearchPostsOpts{Mode: "latest"}); err == nil {
+		t.Fatal("want error for unknown mode")
+	}
+}
+
+// A transport-level rejection (Meta answers an unknown/rotated doc_id with
+// HTTP 400) must surface as an APIError — not as a nil-body parse EOF.
+func TestSearchPosts_HTTPErrorIsAPIError(t *testing.T) {
+	withZeroDelays(t)
+	fr, _ := json.Marshal(fetchResult{Status: 400, Body: `{"errors":[{"message":"bad doc_id"}]}`})
+	ts, _, _ := cdpTestServer(t, "/api/v1/chrome/interact", string(fr))
+	t.Cleanup(ts.Close)
+	c, err := NewClient(Config{WowaURL: ts.URL, Session: "test"})
+	if err != nil {
+		t.Fatalf("NewClient: %v", err)
+	}
+	c.lsd, c.lsdAt, c.fbDtsg = "lsd", time.Now(), "dtsg"
+	_, err = c.SearchPosts(context.Background(), "openai", SearchPostsOpts{})
+	var ae *APIError
+	if !errors.As(err, &ae) {
+		t.Fatalf("want APIError, got %v", err)
+	}
+}
+
 func TestSearchPostsVariables_Template(t *testing.T) {
 	var m map[string]any
 	if err := json.Unmarshal([]byte(searchPostsVarsJSON), &m); err != nil {
@@ -105,6 +131,14 @@ func TestSearchPostsVariables_Template(t *testing.T) {
 	v := searchPostsVariables("q1", SearchRecent)
 	if v[searchPostsQueryKey] != "q1" || v[searchPostsModeKey] != searchPostsModeRecent {
 		t.Fatalf("variables not applied: %v", v)
+	}
+	// Pin the wire contract to literals — the captured payload uses
+	// "recent":0 for the Top tab and "recent":1 for Recent.
+	if v["recent"] != 1 {
+		t.Fatalf("recent mode must emit recent=1, got %v", v["recent"])
+	}
+	if tv := searchPostsVariables("q1", SearchTop); tv["recent"] != 0 {
+		t.Fatalf("top mode must emit recent=0, got %v", tv["recent"])
 	}
 	if searchPostsModeTop == searchPostsModeRecent {
 		t.Fatal("top and recent mode values are identical")
