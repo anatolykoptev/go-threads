@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -64,6 +65,51 @@ func (c *Client) nextSession() string {
 	return fmt.Sprintf("%s-%d", c.cfg.Session, i)
 }
 
+// limiterHost returns the host of a base-URL constant. Limiter rules take their
+// hosts from the same constants the requests are built from: a hand-typed
+// "www.threads.net" once matched nothing, because every request goes to
+// www.threads.com, and Threads traffic ran unthrottled. An empty host would be
+// a wildcard rule in go-stealth's matchRule, so it panics instead.
+func limiterHost(baseURL string) string {
+	u, err := url.Parse(baseURL)
+	if err != nil || u.Hostname() == "" {
+		panic("go-threads: base URL without a host: " + baseURL)
+	}
+	return u.Hostname()
+}
+
+// boundedRateLimit gates stealth-transport requests on the shared limiter.
+// BrowserClient.Do takes no context, and go-stealth's RateLimitMiddleware waits
+// on context.Background(): with a spent budget a request sat out the rest of
+// the 15-minute window past any caller deadline, holding lsdMu when it was an
+// LSD refresh. Here a request waits at most maxHold, then fails.
+func boundedRateLimit(limiter *ratelimit.DomainLimiter, maxHold time.Duration) stealth.Middleware {
+	return func(next stealth.Handler) stealth.Handler {
+		return func(req *stealth.Request) (*stealth.Response, error) {
+			ctx, cancel := context.WithTimeout(context.Background(), maxHold)
+			err := limiter.Wait(ctx, req.URL)
+			cancel()
+			if err != nil {
+				return nil, fmt.Errorf("rate limit %s: held longer than %s: %w", req.URL, maxHold, err)
+			}
+			resp, err := next(req)
+			if err == nil && resp.StatusCode == http.StatusTooManyRequests {
+				limiter.MarkRateLimited(req.URL, time.Now().Add(retryAfter(resp.Headers["retry-after"])))
+			}
+			return resp, err
+		}
+	}
+}
+
+// retryAfter reads a delay-seconds Retry-After value. An absent header or an
+// HTTP date falls back to the cooldown the CDP path uses.
+func retryAfter(v string) time.Duration {
+	if s, err := strconv.Atoi(strings.TrimSpace(v)); err == nil && s > 0 {
+		return time.Duration(s) * time.Second
+	}
+	return cdpRateLimitCooldown
+}
+
 // NewClient creates a new Threads client.
 func NewClient(cfg Config) (*Client, error) {
 	cfg.defaults()
@@ -86,26 +132,26 @@ func NewClient(cfg Config) (*Client, error) {
 	// Add go-stealth middleware
 	limiter := ratelimit.NewDomainLimiter(
 		ratelimit.DomainConfig{
-			Domain:            "www.threads.net",
+			Domain:            limiterHost(threadsBaseURL),
 			RequestsPerWindow: 30,
 			WindowDuration:    15 * time.Minute,
 			MinDelay:          2 * time.Second,
 		},
 		ratelimit.DomainConfig{
-			Domain:            "i.instagram.com",
+			Domain:            limiterHost(igBaseURL),
 			RequestsPerWindow: 20,
 			WindowDuration:    15 * time.Minute,
 			MinDelay:          3 * time.Second,
 		},
 		ratelimit.DomainConfig{
-			Domain:            "www.instagram.com",
+			Domain:            limiterHost(igWebBaseURL),
 			RequestsPerWindow: 20,
 			WindowDuration:    15 * time.Minute,
 			MinDelay:          3 * time.Second,
 		},
 	)
 	bc.Use(
-		stealth.RateLimitMiddleware(limiter),
+		boundedRateLimit(limiter, time.Duration(cfg.Timeout)*time.Second),
 		stealth.ClientHintsMiddleware,
 	)
 

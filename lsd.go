@@ -82,7 +82,7 @@ func fetchLSDToken(bc *stealth.BrowserClient) (lsd string, csrf string, fbDtsg s
 }
 
 // fetchLSDTokenCDP extracts LSD, csrftoken, and fb_dtsg from the live browser
-// page on www.threads.net, avoiding a datacenter go-stealth fetch.
+// page on www.threads.com, avoiding a datacenter go-stealth fetch.
 func (c *Client) fetchLSDTokenCDP(ctx context.Context) (lsd string, csrf string, fbDtsg string, err error) {
 	script := `(() => {
   const html = document.documentElement.innerHTML;
