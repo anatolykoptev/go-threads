@@ -182,3 +182,28 @@ func TestRetryAfter(t *testing.T) {
 		}
 	}
 }
+
+// A CDP request must not wait out a spent budget until the caller's deadline.
+// After a 429 backs www.instagram.com off for 5 minutes, an uncapped hold ate
+// the caller's whole ctx on the CDP attempt and then on every fallback that
+// shares the host (embed, SSR), so the embed tier never got to rescue a
+// download (go-threads#60).
+func TestCDPThrottleHoldIsBoundedByTimeout(t *testing.T) {
+	c, err := NewClient(Config{Timeout: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := igWebBaseURL + "/api/v1/media/1/info/"
+	c.cdpMarkLimited(target)
+
+	done := make(chan error, 1)
+	go func() { done <- c.cdpThrottle(context.Background(), target) }()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.DeadlineExceeded) || !strings.Contains(err.Error(), "rate limit ") {
+			t.Fatalf("want the limiter's bounded-hold error, got %v", err)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("CDP request held past the client Timeout: the hold is bounded only by the caller's ctx")
+	}
+}

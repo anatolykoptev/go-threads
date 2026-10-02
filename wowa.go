@@ -86,6 +86,15 @@ func (c *Client) cdpThrottle(ctx context.Context, targetURL string) error {
 	slog.Warn("threads: CDP request held by domain limiter",
 		slog.String("url", targetURL),
 		slog.Int64("throttled_total", n))
+	// The hold is capped at the client Timeout, as on the stealth path
+	// (boundedRateLimit). Bounded only by the caller's ctx, a 5-minute 429
+	// backoff ate the whole deadline on the CDP attempt and again on every
+	// fallback that shares the host, so the embed tier never ran.
+	if hold := time.Duration(c.cfg.Timeout) * time.Second; hold > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, hold)
+		defer cancel()
+	}
 	if err := c.limiter.Wait(ctx, targetURL); err != nil {
 		return fmt.Errorf("rate limit %s: %w", targetURL, err)
 	}
