@@ -82,3 +82,47 @@ func TestNewClientLimiterGatesEveryMetaHost(t *testing.T) {
 		})
 	}
 }
+
+// A host with no rule is never held. An empty rule Domain would be a wildcard
+// in go-stealth's matchRule and throttle every host, kkinstagram and CDN
+// fetches included.
+func TestNewClientLimiterLeavesUnruledHostsAlone(t *testing.T) {
+	c, err := NewClient(Config{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := kkInstagramBase + "/reel/x"
+	for i := range 2 {
+		if !c.limiter.Allow(target) {
+			t.Fatalf("request %d to %s was held: a limiter rule matches a host it should not", i+1, kkInstagramBase)
+		}
+	}
+}
+
+// A stealth-transport request must not wait out a spent budget past the
+// client's Timeout. BrowserClient.Do takes no context, and go-stealth's own
+// RateLimitMiddleware waits on context.Background(), so such a request sat
+// until the window reset.
+func TestStealthRateLimitHoldIsBounded(t *testing.T) {
+	c, err := NewClient(Config{Timeout: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := threadsBaseURL + "/@instagram"
+	// An hour-long backoff: the request must fail without reaching the network.
+	c.limiter.MarkRateLimited(target, time.Now().Add(time.Hour))
+
+	done := make(chan error, 1)
+	go func() {
+		_, _, _, err := c.bc.Do("GET", target, nil, nil)
+		done <- err
+	}()
+	select {
+	case err := <-done:
+		if err == nil {
+			t.Fatal("request through a spent budget returned no error")
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("stealth request held past the client Timeout: the limiter wait ignores every deadline")
+	}
+}
