@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -62,6 +63,11 @@ type wowaInteractRequest struct {
 	Proxy   *string      `json:"proxy,omitempty"` // residential proxy URL for the browser fetch
 }
 
+// errRateLimitHold marks a request the limiter held until its deadline. It is
+// not retryable: a retry targets the same host and meets the same backoff, so
+// the retry loops return it at once instead of multiplying the hold.
+var errRateLimitHold = errors.New("held by the rate limiter")
+
 // cdpRateLimitCooldown is the fixed backoff applied to a domain when a CDP
 // request returns 429 — the in-page fetch returns no Retry-After header, so a
 // fixed window stands in. Matches the limiter's 15m rules on the safe side.
@@ -96,7 +102,7 @@ func (c *Client) cdpThrottle(ctx context.Context, targetURL string) error {
 		defer cancel()
 	}
 	if err := c.limiter.Wait(ctx, targetURL); err != nil {
-		return fmt.Errorf("rate limit %s: %w", targetURL, err)
+		return fmt.Errorf("rate limit %s: %w: %w", targetURL, errRateLimitHold, err)
 	}
 	return nil
 }
