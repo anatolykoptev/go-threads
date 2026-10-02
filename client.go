@@ -64,6 +64,14 @@ func (c *Client) nextSession() string {
 	return fmt.Sprintf("%s-%d", c.cfg.Session, i)
 }
 
+// limiterHost returns the host of a base-URL constant. Limiter rules take their
+// hosts from the same constants the requests are built from: a hand-typed
+// "www.threads.net" once matched nothing, because every request goes to
+// www.threads.com, and Threads traffic ran unthrottled.
+func limiterHost(baseURL string) string {
+	return strings.TrimPrefix(baseURL, "https://")
+}
+
 // NewClient creates a new Threads client.
 func NewClient(cfg Config) (*Client, error) {
 	cfg.defaults()
@@ -86,19 +94,19 @@ func NewClient(cfg Config) (*Client, error) {
 	// Add go-stealth middleware
 	limiter := ratelimit.NewDomainLimiter(
 		ratelimit.DomainConfig{
-			Domain:            "www.threads.net",
+			Domain:            limiterHost(threadsBaseURL),
 			RequestsPerWindow: 30,
 			WindowDuration:    15 * time.Minute,
 			MinDelay:          2 * time.Second,
 		},
 		ratelimit.DomainConfig{
-			Domain:            "i.instagram.com",
+			Domain:            limiterHost(igBaseURL),
 			RequestsPerWindow: 20,
 			WindowDuration:    15 * time.Minute,
 			MinDelay:          3 * time.Second,
 		},
 		ratelimit.DomainConfig{
-			Domain:            "www.instagram.com",
+			Domain:            limiterHost(igWebBaseURL),
 			RequestsPerWindow: 20,
 			WindowDuration:    15 * time.Minute,
 			MinDelay:          3 * time.Second,

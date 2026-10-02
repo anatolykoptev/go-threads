@@ -76,12 +76,16 @@ func (c *Client) cdpThrottle(ctx context.Context, targetURL string) error {
 	if c.limiter == nil {
 		return nil
 	}
-	if !c.limiter.Allow(targetURL) {
-		n := c.cdpThrottled.Add(1)
-		slog.Warn("threads: CDP request held by domain limiter",
-			slog.String("url", targetURL),
-			slog.Int64("throttled_total", n))
+	// Allow charges a slot when it admits, so an admitted request returns
+	// here. Checking with Allow and then calling Wait would charge two slots
+	// and hold every request for the rule's MinDelay.
+	if c.limiter.Allow(targetURL) {
+		return nil
 	}
+	n := c.cdpThrottled.Add(1)
+	slog.Warn("threads: CDP request held by domain limiter",
+		slog.String("url", targetURL),
+		slog.Int64("throttled_total", n))
 	if err := c.limiter.Wait(ctx, targetURL); err != nil {
 		return fmt.Errorf("rate limit %s: %w", targetURL, err)
 	}
