@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log/slog"
@@ -90,7 +91,7 @@ func boundedRateLimit(limiter *ratelimit.DomainLimiter, maxHold time.Duration) s
 			err := limiter.Wait(ctx, req.URL)
 			cancel()
 			if err != nil {
-				return nil, fmt.Errorf("rate limit %s: held longer than %s: %w", req.URL, maxHold, err)
+				return nil, fmt.Errorf("rate limit %s: %w for %s: %w", req.URL, errRateLimitHold, maxHold, err)
 			}
 			resp, err := next(req)
 			if err == nil && resp.StatusCode == http.StatusTooManyRequests {
@@ -216,6 +217,9 @@ func (c *Client) fetchPage(ctx context.Context, endpoint, pageURL string) ([]byt
 			body, _, status, err = c.bc.DoWithHeaderOrder("GET", pageURL, pageHeaders, nil, threadsHeaderOrder)
 		}
 		if err != nil {
+			if errors.Is(err, errRateLimitHold) {
+				return nil, fmt.Errorf("%s: %w", endpoint, err)
+			}
 			lastErr = err
 			continue
 		}
@@ -301,6 +305,9 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID, friendlyName st
 
 		lsd, lsdErr := c.ensureLSD(ctx)
 		if lsdErr != nil {
+			if errors.Is(lsdErr, errRateLimitHold) {
+				return nil, fmt.Errorf("%s: %w", endpoint, lsdErr)
+			}
 			lastErr = lsdErr
 			continue
 		}
@@ -339,6 +346,9 @@ func (c *Client) doGraphQL(ctx context.Context, endpoint, docID, friendlyName st
 			)
 		}
 		if doErr != nil {
+			if errors.Is(doErr, errRateLimitHold) {
+				return nil, fmt.Errorf("%s: %w", endpoint, doErr)
+			}
 			lastErr = doErr
 			continue
 		}
@@ -430,6 +440,9 @@ func (c *Client) doPrivateAPI(ctx context.Context, endpoint, path string, form u
 
 		body, _, status, err := c.bc.Do("POST", igBaseURL+path, headers, strings.NewReader(signedBody))
 		if err != nil {
+			if errors.Is(err, errRateLimitHold) {
+				return nil, fmt.Errorf("%s: %w", endpoint, err)
+			}
 			lastErr = err
 			continue
 		}
@@ -494,6 +507,9 @@ func (c *Client) doPrivateGET(ctx context.Context, endpoint, path string, params
 
 		body, _, status, err := c.bc.Do("GET", fullURL, headers, nil)
 		if err != nil {
+			if errors.Is(err, errRateLimitHold) {
+				return nil, fmt.Errorf("%s: %w", endpoint, err)
+			}
 			lastErr = err
 			continue
 		}

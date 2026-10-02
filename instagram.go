@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"math/big"
@@ -14,14 +15,13 @@ import (
 	"time"
 )
 
-const (
-	// kkinstagram is an embed-proxy service that resolves Instagram video CDN URLs.
-	// GET request returns 302 redirect to the actual video file.
-	kkInstagramBase = "https://kkinstagram.com"
+// kkInstagramBase is an embed-proxy service that resolves Instagram video CDN
+// URLs: a GET returns a 302 redirect to the actual video file. A var so tests
+// can point the last fallback tier at a local server.
+var kkInstagramBase = "https://kkinstagram.com"
 
-	// mediaTypeVideo is Instagram's media_type for video posts.
-	mediaTypeVideo = 2
-)
+// mediaTypeVideo is Instagram's media_type for video posts.
+const mediaTypeVideo = 2
 
 // GetInstagramPost fetches a post from instagram.com by shortcode.
 // Works with /p/{code}/ and /reel/{code}/ URLs.
@@ -45,34 +45,48 @@ func (c *Client) GetInstagramPost(ctx context.Context, shortcode string) (*Threa
 			slog.Any("error", err))
 	}
 
+	// The embed and SSR tiers fetch www.instagram.com, the host the CDP
+	// attempt was just held on: behind the same backoff they would each wait
+	// out a full hold and fail, so a hold sends the chain straight to the
+	// proxy tier.
+	errHostHeld := fmt.Errorf("skipped: www.instagram.com %w", errRateLimitHold)
+	held := errors.Is(cdpErr, errRateLimitHold)
+
 	// Method 1: embed page (public, no auth — the working fallback tier).
 	// Tries /reel/<code>/embed/ first (reels), then /p/<code>/embed/ (posts).
-	thread, err := c.getInstagramViaEmbed(ctx, shortcode)
-	if err == nil && thread != nil && len(thread.Items) > 0 {
-		thread.SourceMethod = "embed"
-		slog.Info("instagram: embed fallback succeeded (degraded — no engagement metrics)",
-			slog.String("shortcode", shortcode))
-		return thread, nil
-	}
-	embedErr := err
-	if err != nil {
-		slog.Debug("instagram: embed method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
+	embedErr := errHostHeld
+	if !held {
+		thread, err := c.getInstagramViaEmbed(ctx, shortcode)
+		if err == nil && thread != nil && len(thread.Items) > 0 {
+			thread.SourceMethod = "embed"
+			slog.Info("instagram: embed fallback succeeded (degraded — no engagement metrics)",
+				slog.String("shortcode", shortcode))
+			return thread, nil
+		}
+		embedErr = err
+		if err != nil {
+			slog.Debug("instagram: embed method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
+		}
+		held = errors.Is(err, errRateLimitHold)
 	}
 
 	// Method 2: direct page SSR (requires session cookies).
-	thread, err = c.getInstagramViaSSR(ctx, shortcode)
-	if err == nil && thread != nil && len(thread.Items) > 0 {
-		thread.SourceMethod = "ssr"
-		return thread, nil
-	}
-	ssrErr := err
-	if err != nil {
-		slog.Debug("instagram: SSR method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
+	ssrErr := errHostHeld
+	if !held {
+		thread, err := c.getInstagramViaSSR(ctx, shortcode)
+		if err == nil && thread != nil && len(thread.Items) > 0 {
+			thread.SourceMethod = "ssr"
+			return thread, nil
+		}
+		ssrErr = err
+		if err != nil {
+			slog.Debug("instagram: SSR method failed", slog.String("shortcode", shortcode), slog.String("error", err.Error()))
+		}
 	}
 
 	// Method 3 (LAST RESORT): kkinstagram.com proxy — often 404/403 for reels,
 	// kept last in case the service revives. Returns video URL only.
-	thread, err = c.getInstagramViaProxy(ctx, shortcode)
+	thread, err := c.getInstagramViaProxy(ctx, shortcode)
 	if err == nil && thread != nil && hasVideo(thread) {
 		thread.SourceMethod = "proxy"
 		return thread, nil
@@ -270,6 +284,9 @@ func (c *Client) getInstagramViaEmbed(ctx context.Context, shortcode string) (*T
 	for _, suffix := range []string{"/reel/", "/p/"} {
 		embedURL := igWebBaseURL + suffix + shortcode + "/embed/"
 		html, err := c.fetchPage(ctx, "GetInstagramEmbed", embedURL)
+		if errors.Is(err, errRateLimitHold) {
+			return nil, err // /p/ is the same host and would be held too
+		}
 		if err != nil {
 			slog.Debug("instagram: embed fetch failed",
 				slog.String("shortcode", shortcode),

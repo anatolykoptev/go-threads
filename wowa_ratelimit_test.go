@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"net/http/httptest"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -180,5 +182,126 @@ func TestRetryAfter(t *testing.T) {
 		if got := retryAfter(tc.header); got != tc.want {
 			t.Errorf("retryAfter(%q) = %v, want %v", tc.header, got, tc.want)
 		}
+	}
+}
+
+// A CDP request must not wait out a spent budget until the caller's deadline.
+// After a 429 backs www.instagram.com off for 5 minutes, an uncapped hold ate
+// the caller's whole ctx on the CDP attempt and then on every fallback that
+// shares the host (embed, SSR), so the embed tier never got to rescue a
+// download (go-threads#60).
+func TestCDPThrottleHoldIsBoundedByTimeout(t *testing.T) {
+	c, err := NewClient(Config{Timeout: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	target := igWebBaseURL + "/api/v1/media/1/info/"
+	c.cdpMarkLimited(target)
+
+	start := time.Now()
+	done := make(chan error, 1)
+	go func() { done <- c.cdpThrottle(context.Background(), target) }()
+	select {
+	case err := <-done:
+		if !errors.Is(err, errRateLimitHold) || !errors.Is(err, context.DeadlineExceeded) {
+			t.Fatalf("want the limiter's bounded-hold error, got %v", err)
+		}
+		// A cap that fails at once would starve the 2-3 s MinDelay holds.
+		if held := time.Since(start); held < 900*time.Millisecond {
+			t.Fatalf("hold gave up after %v, want about the 1s Timeout", held)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("CDP request held past the client Timeout: the hold is bounded only by the caller's ctx")
+	}
+}
+
+// A limiter hold is not retried: the next attempt targets the same host and
+// meets the same backoff, so fetchPage's retry loop would only multiply it.
+func TestFetchPageDoesNotRetryAHold(t *testing.T) {
+	// The throttle runs before any go-wowa call, so this URL is never dialled.
+	c, err := NewClient(Config{Timeout: 1, WowaURL: "http://127.0.0.1:9"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.cdpMarkLimited(igWebBaseURL + "/")
+
+	_, err = c.fetchPage(context.Background(), "GetInstagramEmbed", igWebBaseURL+"/reel/x/embed/")
+	if !errors.Is(err, errRateLimitHold) {
+		t.Fatalf("want a limiter-hold error, got %v", err)
+	}
+	if n := c.cdpThrottled.Load(); n != 1 {
+		t.Fatalf("request held %d times, want 1: a hold was retried", n)
+	}
+}
+
+// After the CDP attempt is held on www.instagram.com, GetInstagramPost goes
+// straight to the proxy tier: embed and SSR fetch the same host and would each
+// wait out a full hold behind the same backoff (go-threads#60).
+func TestGetInstagramPostSkipsHeldHostTiers(t *testing.T) {
+	wowa, _, _ := cdpTestServer(t, "/api/v1/chrome/interact", `{"status":200,"body":"{}"}`)
+	defer wowa.Close()
+	var proxyHits atomic.Int32
+	proxy := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		proxyHits.Add(1)
+		http.NotFound(w, nil)
+	}))
+	defer proxy.Close()
+	orig := kkInstagramBase
+	kkInstagramBase = proxy.URL
+	t.Cleanup(func() { kkInstagramBase = orig })
+
+	c, err := NewClient(Config{Timeout: 1, WowaURL: wowa.URL})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.cdpMarkLimited(igWebBaseURL + "/")
+
+	_, err = c.GetInstagramPost(context.Background(), "DbuWxrevxiy")
+	if !errors.Is(err, errRateLimitHold) {
+		t.Fatalf("want the CDP hold surfaced, got %v", err)
+	}
+	if n := c.cdpThrottled.Load(); n != 1 {
+		t.Fatalf("www.instagram.com held %d times, want 1: a same-host tier ran after the hold", n)
+	}
+	if proxyHits.Load() != 1 {
+		t.Fatalf("proxy tier hit %d times, want 1", proxyHits.Load())
+	}
+}
+
+// doGraphQL is the other CDP retry loop: a held Threads GraphQL request must
+// come back after one hold, not three.
+func TestDoGraphQLDoesNotRetryAHold(t *testing.T) {
+	c, err := NewClient(Config{Timeout: 1, WowaURL: "http://127.0.0.1:9"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.lsd, c.lsdAt = "cached", time.Now() // skip the LSD page fetch
+	c.cdpMarkLimited(threadsBaseURL + "/graphql/query")
+
+	_, err = c.doGraphQL(context.Background(), "GetThreadLikers", docIDGetThreadLikers, "x", map[string]any{})
+	if !errors.Is(err, errRateLimitHold) {
+		t.Fatalf("want a limiter-hold error, got %v", err)
+	}
+	if n := c.cdpThrottled.Load(); n != 1 {
+		t.Fatalf("request held %d times, want 1: a hold was retried", n)
+	}
+}
+
+// The stealth-path loops must not retry a hold either: three holds plus
+// backoff would take about 6s against one 1s hold.
+func TestDoPrivateGETDoesNotRetryAHold(t *testing.T) {
+	c, err := NewClient(Config{Timeout: 1, Token: "t"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	c.limiter.MarkRateLimited(igBaseURL+"/", time.Now().Add(time.Hour))
+
+	start := time.Now()
+	_, err = c.doPrivateGET(context.Background(), "GetUserFollowers", "/api/v1/friendships/1/followers/", nil)
+	if !errors.Is(err, errRateLimitHold) {
+		t.Fatalf("want a limiter-hold error, got %v", err)
+	}
+	if took := time.Since(start); took > 2500*time.Millisecond {
+		t.Fatalf("returned after %v: a hold was retried", took)
 	}
 }
