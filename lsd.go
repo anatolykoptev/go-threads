@@ -17,31 +17,62 @@ var lsdRe = regexp.MustCompile(`LSD",\[\],\{"token":"([^"]+)"\}`)
 
 // ensureLSD returns a cached LSD token or fetches a new one.
 // Also captures csrftoken and fb_dtsg from response for GraphQL auth.
-func (c *Client) ensureLSD(ctx context.Context) (string, error) {
+//
+// Proxied anonymous calls run in a different browser context than the logged-in
+// ones, and an LSD/DTSG pair is bound to the context that rendered it, so they
+// keep a separate cache (see splitAnonLSD).
+func (c *Client) ensureLSD(ctx context.Context, flow wowaFlow) (lsd, fbDtsg string, err error) {
 	c.lsdMu.Lock()
 	defer c.lsdMu.Unlock()
 
-	if c.lsd != "" && time.Since(c.lsdAt) < lsdTTL {
-		return c.lsd, nil
+	if c.splitAnonLSD(flow) {
+		if c.anonLSD != "" && time.Since(c.anonLSDAt) < lsdTTL {
+			return c.anonLSD, c.anonFbDtsg, nil
+		}
+		token, _, dtsg, err := c.fetchLSDTokenCDP(ctx, flow)
+		if err != nil {
+			return "", "", err
+		}
+		c.anonLSD, c.anonFbDtsg, c.anonLSDAt = token, dtsg, time.Now()
+		return token, dtsg, nil
 	}
 
-	var token, csrf, fbDtsg string
-	var err error
+	if c.lsd != "" && time.Since(c.lsdAt) < lsdTTL {
+		return c.lsd, c.fbDtsg, nil
+	}
+
+	var token, csrf, dtsg string
 	if c.wowa != nil {
-		token, csrf, fbDtsg, err = c.fetchLSDTokenCDP(ctx)
+		token, csrf, dtsg, err = c.fetchLSDTokenCDP(ctx, flow)
 	} else {
-		token, csrf, fbDtsg, err = fetchLSDToken(c.bc)
+		token, csrf, dtsg, err = fetchLSDToken(c.bc)
 	}
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	c.lsd = token
 	if csrf != "" {
 		c.csrf = csrf
 	}
-	c.fbDtsg = fbDtsg
+	c.fbDtsg = dtsg
 	c.lsdAt = time.Now()
-	return token, nil
+	return token, dtsg, nil
+}
+
+// splitAnonLSD reports whether flow runs in the proxied anonymous context.
+func (c *Client) splitAnonLSD(flow wowaFlow) bool {
+	return flow == flowAnon && c.wowa != nil && c.wowa.proxy != ""
+}
+
+// invalidateLSD drops the cached token of the context flow runs in.
+func (c *Client) invalidateLSD(flow wowaFlow) {
+	c.lsdMu.Lock()
+	defer c.lsdMu.Unlock()
+	if c.splitAnonLSD(flow) {
+		c.anonLSD = ""
+		return
+	}
+	c.lsd = ""
 }
 
 var csrfRe = regexp.MustCompile(`csrftoken=([^;]+)`)
@@ -83,7 +114,7 @@ func fetchLSDToken(bc *stealth.BrowserClient) (lsd string, csrf string, fbDtsg s
 
 // fetchLSDTokenCDP extracts LSD, csrftoken, and fb_dtsg from the live browser
 // page on www.threads.com, avoiding a datacenter go-stealth fetch.
-func (c *Client) fetchLSDTokenCDP(ctx context.Context) (lsd string, csrf string, fbDtsg string, err error) {
+func (c *Client) fetchLSDTokenCDP(ctx context.Context, flow wowaFlow) (lsd string, csrf string, fbDtsg string, err error) {
 	script := `(() => {
   const html = document.documentElement.innerHTML;
   const extract = (prefix) => {
@@ -102,7 +133,7 @@ func (c *Client) fetchLSDTokenCDP(ctx context.Context) (lsd string, csrf string,
 })()`
 
 	pageURL := threadsBaseURL + "/@instagram"
-	res, err := c.wowa.interact(ctx, c.nextSession(), pageURL, []wowaAction{{Type: "evaluate", Script: script}})
+	res, err := c.wowa.interact(ctx, flow, c.nextSession(), pageURL, []wowaAction{{Type: "evaluate", Script: script}})
 	if err != nil {
 		return "", "", "", fmt.Errorf("fetch LSD token via CDP: %w", err)
 	}

@@ -60,6 +60,26 @@ const (
 	wowaModeProxy   = "proxy"
 )
 
+// wowaFlow says whether a go-wowa call needs the logged-in Meta account.
+// Every call site passes it deliberately; nothing is inferred.
+type wowaFlow int
+
+const (
+	// flowAuthed calls need the Meta login (sessionid + ds_user_id), which lives
+	// only in go-browser's default persistent profile. They always use mode
+	// "default" with no proxy and the original session name, whatever
+	// Config.Proxy says.
+	flowAuthed wowaFlow = iota + 1
+	// flowAnon calls need no login. With a proxy configured they use mode
+	// "proxy" (go-browser ignores a proxy in "default" mode) on a distinct
+	// "<session>-anon" tab, so one named tab never alternates between
+	// contexts. Without a proxy they are identical to flowAuthed.
+	flowAnon
+)
+
+// wowaAnonSuffix is appended to the session name of proxied anonymous calls.
+const wowaAnonSuffix = "-anon"
+
 // wowaInteractRequest is the POST body for /api/v1/chrome/interact.
 type wowaInteractRequest struct {
 	URL     string       `json:"url"`
@@ -145,20 +165,22 @@ type fetchResult struct {
 
 // interact POSTs to go-wowa's /api/v1/chrome/interact with the given actions
 // and returns the last action's result data.
-func (w *wowaTransport) interact(ctx context.Context, session, pageURL string, actions []wowaAction) (json.RawMessage, error) {
+func (w *wowaTransport) interact(ctx context.Context, flow wowaFlow, session, pageURL string, actions []wowaAction) (json.RawMessage, error) {
 	body := wowaInteractRequest{
 		URL:     pageURL,
 		Mode:    wowaModeDefault,
 		Session: session,
 		Actions: actions,
 	}
-	if w.proxy != "" {
+	if flow == flowAnon && w.proxy != "" {
 		// go-browser never applies a proxy to the "default" context, so a
 		// default-mode request with a proxy egresses from the host's own IP.
-		// "proxy" mode keys a persistent context on the proxy URL. Never send
-		// "proxy" with an empty proxy: go-browser would create a fresh,
-		// unproxied incognito context (key "proxy:") instead of the default one.
+		// "proxy" mode runs in a disposable incognito context keyed on the
+		// proxy URL (no login, no persistence). Never send "proxy" with an
+		// empty proxy: go-browser would create an unproxied incognito context
+		// (key "proxy:") instead of the default one.
 		body.Mode = wowaModeProxy
+		body.Session = session + wowaAnonSuffix
 		p := w.proxy
 		body.Proxy = &p
 	}
@@ -277,9 +299,9 @@ func buildFetchScript(endpoint, method, body, appID, lsd, asbdID, friendlyName s
 // wowaFetchOnce runs a single in-page fetch via go-wowa, with one on-demand
 // re-navigate retry if the first attempt is redirected/opaque/status-0. It
 // returns the fetchResult for the caller to classify.
-func (c *Client) wowaFetchOnce(ctx context.Context, session, pageURL, script string) (fetchResult, error) {
+func (c *Client) wowaFetchOnce(ctx context.Context, flow wowaFlow, session, pageURL, script string) (fetchResult, error) {
 	var fr fetchResult
-	res, err := c.wowa.interact(ctx, session, pageURL, []wowaAction{{Type: "evaluate", Script: script}})
+	res, err := c.wowa.interact(ctx, flow, session, pageURL, []wowaAction{{Type: "evaluate", Script: script}})
 	if err != nil {
 		return fr, fmt.Errorf("go-wowa interact: %w", err)
 	}
@@ -289,7 +311,7 @@ func (c *Client) wowaFetchOnce(ctx context.Context, session, pageURL, script str
 	}
 
 	if fr.Redirected || fr.Status == 302 || fr.Status == 0 {
-		retryRes, rerr := c.wowa.interact(ctx, session, pageURL, []wowaAction{
+		retryRes, rerr := c.wowa.interact(ctx, flow, session, pageURL, []wowaAction{
 			{Type: "navigate", URL: pageURL},
 			{Type: "evaluate", Script: script},
 		})
@@ -377,7 +399,7 @@ func detectChallenge(body string) string {
 // logged-in account's user id; it is present iff the tab is authenticated and
 // absent when logged out (verified live on a logged-in cloakbrowser profile).
 func (c *Client) checkSessionCookie(ctx context.Context, session, pageURL string) error {
-	res, err := c.wowa.interact(ctx, session, pageURL, []wowaAction{
+	res, err := c.wowa.interact(ctx, flowAuthed, session, pageURL, []wowaAction{
 		{Type: "evaluate", Script: "document.cookie"},
 	})
 	if err != nil {
@@ -430,7 +452,7 @@ func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form 
 		return nil, fmt.Errorf("%s: build fetch script: %w", endpoint, err)
 	}
 
-	fr, err := c.wowaFetchOnce(ctx, sess, pageURL, js)
+	fr, err := c.wowaFetchOnce(ctx, flowAuthed, sess, pageURL, js)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", endpoint, err)
 	}
@@ -470,7 +492,7 @@ func (c *Client) doCDP(ctx context.Context, endpoint, method, path string, form 
 // doGraphQLCDP routes a Threads GraphQL POST through go-wowa as an in-page
 // same-origin fetch from a www.threads.com tab. It returns the raw response
 // body, the HTTP status, and any transport/script error.
-func (c *Client) doGraphQLCDP(ctx context.Context, endpoint, bodyStr, lsd, friendlyName string) ([]byte, int, error) {
+func (c *Client) doGraphQLCDP(ctx context.Context, flow wowaFlow, endpoint, bodyStr, lsd, friendlyName string) ([]byte, int, error) {
 	script, err := buildFetchScript(
 		threadsBaseURL+"/graphql/query",
 		http.MethodPost,
@@ -488,7 +510,7 @@ func (c *Client) doGraphQLCDP(ctx context.Context, endpoint, bodyStr, lsd, frien
 	if err := c.cdpThrottle(ctx, threadsBaseURL+"/graphql/query"); err != nil {
 		return nil, 0, fmt.Errorf("%s: %w", endpoint, err)
 	}
-	fr, err := c.wowaFetchOnce(ctx, c.nextSession(), pageURL, script)
+	fr, err := c.wowaFetchOnce(ctx, flow, c.nextSession(), pageURL, script)
 	if err != nil {
 		return nil, 0, fmt.Errorf("%s: %w", endpoint, err)
 	}
@@ -510,7 +532,7 @@ func (c *Client) doGraphQLCDP(ctx context.Context, endpoint, bodyStr, lsd, frien
 // fetchPageCDP navigates to an arbitrary page URL through go-wowa and returns
 // the rendered page HTML (document.documentElement.outerHTML). It returns 200
 // on success, or 302 if the page contains a login redirect.
-func (c *Client) fetchPageCDP(ctx context.Context, pageURL string) ([]byte, int, error) {
+func (c *Client) fetchPageCDP(ctx context.Context, flow wowaFlow, pageURL string) ([]byte, int, error) {
 	if err := c.cdpThrottle(ctx, pageURL); err != nil {
 		return nil, 0, err
 	}
@@ -518,7 +540,7 @@ func (c *Client) fetchPageCDP(ctx context.Context, pageURL string) ([]byte, int,
 		{Type: "navigate", URL: pageURL},
 		{Type: "evaluate", Script: "document.documentElement.outerHTML"},
 	}
-	res, err := c.wowa.interact(ctx, c.nextSession(), pageURL, actions)
+	res, err := c.wowa.interact(ctx, flow, c.nextSession(), pageURL, actions)
 	if err != nil {
 		return nil, 0, fmt.Errorf("go-wowa interact: %w", err)
 	}

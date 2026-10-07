@@ -283,7 +283,7 @@ func (c *Client) getInstagramViaEmbed(ctx context.Context, shortcode string) (*T
 	// embed returns a JS-only shell with contextJSON:null for reels.
 	for _, suffix := range []string{"/reel/", "/p/"} {
 		embedURL := igWebBaseURL + suffix + shortcode + "/embed/"
-		html, err := c.fetchPage(ctx, "GetInstagramEmbed", embedURL)
+		html, err := c.fetchPage(ctx, flowAnon, "GetInstagramEmbed", embedURL)
 		if errors.Is(err, errRateLimitHold) {
 			return nil, err // /p/ is the same host and would be held too
 		}
@@ -562,7 +562,7 @@ func unescapeJSON(s string) string {
 // This only works when session cookies are provided in Config.
 func (c *Client) getInstagramViaSSR(ctx context.Context, shortcode string) (*Thread, error) {
 	postURL := igWebBaseURL + "/p/" + shortcode + "/"
-	html, err := c.fetchPage(ctx, "GetInstagramPost", postURL)
+	html, err := c.fetchPage(ctx, flowAuthed, "GetInstagramPost", postURL)
 	if err != nil {
 		return nil, fmt.Errorf("fetch page: %w", err)
 	}

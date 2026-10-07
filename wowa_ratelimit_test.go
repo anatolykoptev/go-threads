@@ -225,7 +225,7 @@ func TestFetchPageDoesNotRetryAHold(t *testing.T) {
 	}
 	c.cdpMarkLimited(igWebBaseURL + "/")
 
-	_, err = c.fetchPage(context.Background(), "GetInstagramEmbed", igWebBaseURL+"/reel/x/embed/")
+	_, err = c.fetchPage(context.Background(), flowAnon, "GetInstagramEmbed", igWebBaseURL+"/reel/x/embed/")
 	if !errors.Is(err, errRateLimitHold) {
 		t.Fatalf("want a limiter-hold error, got %v", err)
 	}
@@ -278,7 +278,7 @@ func TestDoGraphQLDoesNotRetryAHold(t *testing.T) {
 	c.lsd, c.lsdAt = "cached", time.Now() // skip the LSD page fetch
 	c.cdpMarkLimited(threadsBaseURL + "/graphql/query")
 
-	_, err = c.doGraphQL(context.Background(), "GetThreadLikers", docIDGetThreadLikers, "x", map[string]any{})
+	_, err = c.doGraphQL(context.Background(), flowAnon, "GetThreadLikers", docIDGetThreadLikers, "x", map[string]any{})
 	if !errors.Is(err, errRateLimitHold) {
 		t.Fatalf("want a limiter-hold error, got %v", err)
 	}

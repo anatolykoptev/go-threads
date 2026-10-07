@@ -30,7 +30,7 @@ func (c *Client) GetUserByID(ctx context.Context, userID string) (*ThreadsUser, 
 	}
 
 	variables := map[string]any{"userID": userID}
-	body, err := c.doGraphQL(ctx, "GetUser", docIDUserProfile, "BarcelonaProfileRootQuery", variables)
+	body, err := c.doGraphQL(ctx, flowAnon, "GetUser", docIDUserProfile, "BarcelonaProfileRootQuery", variables)
 	if err != nil {
 		return nil, fmt.Errorf("GetUserByID: %w", err)
 	}
@@ -51,7 +51,7 @@ func (c *Client) GetUserThreads(ctx context.Context, username string, count int)
 			return nil, fmt.Errorf("GetUserThreads: %w", err)
 		}
 		variables := map[string]any{"userID": userID}
-		body, err := c.doGraphQL(ctx, "GetUserThreads", docIDUserThreads, "BarcelonaProfileThreadsTabQuery", variables)
+		body, err := c.doGraphQL(ctx, flowAnon, "GetUserThreads", docIDUserThreads, "BarcelonaProfileThreadsTabQuery", variables)
 		if err != nil {
 			return nil, fmt.Errorf("GetUserThreads: %w", err)
 		}
@@ -119,7 +119,7 @@ func (c *Client) GetUserWithThreads(ctx context.Context, username string, count 
 // The code is the short identifier in the URL: threads.net/@user/post/{code}
 func (c *Client) GetThread(ctx context.Context, username, postCode string) (*Thread, []*Thread, error) {
 	postURL := fmt.Sprintf("%s/@%s/post/%s", threadsBaseURL, username, postCode)
-	html, err := c.fetchPage(ctx, "GetThread", postURL)
+	html, err := c.fetchPage(ctx, flowAnon, "GetThread", postURL)
 	if err != nil {
 		return nil, nil, fmt.Errorf("GetThread: %w", err)
 	}
@@ -310,7 +310,7 @@ func (c *Client) GetUserReplies(ctx context.Context, username string, count int)
 			return nil, fmt.Errorf("GetUserReplies: %w", err)
 		}
 		variables := map[string]any{"userID": userID}
-		body, err := c.doGraphQL(ctx, "GetUserReplies", docIDUserReplies, "BarcelonaProfileRepliesTabQuery", variables)
+		body, err := c.doGraphQL(ctx, flowAnon, "GetUserReplies", docIDUserReplies, "BarcelonaProfileRepliesTabQuery", variables)
 		if err != nil {
 			return nil, fmt.Errorf("GetUserReplies: %w", err)
 		}
@@ -325,7 +325,7 @@ func (c *Client) GetUserReplies(ctx context.Context, username string, count int)
 	}
 
 	repliesURL := threadsBaseURL + "/@" + username + "/replies"
-	html, err := c.fetchPage(ctx, "GetUserReplies", repliesURL)
+	html, err := c.fetchPage(ctx, flowAnon, "GetUserReplies", repliesURL)
 	if err != nil {
 		return nil, fmt.Errorf("GetUserReplies: %w", err)
 	}
@@ -346,7 +346,7 @@ func (c *Client) GetThreadLikers(ctx context.Context, threadID string, count int
 	variables := map[string]any{
 		"mediaID": threadID,
 	}
-	body, err := c.doGraphQL(ctx, "GetThreadLikers", docIDGetThreadLikers, "BarcelonaMediaLikersQuery", variables)
+	body, err := c.doGraphQL(ctx, flowAnon, "GetThreadLikers", docIDGetThreadLikers, "BarcelonaMediaLikersQuery", variables)
 	if err != nil {
 		return nil, fmt.Errorf("GetThreadLikers: %w", err)
 	}
@@ -372,7 +372,7 @@ func (c *Client) SearchUsers(ctx context.Context, query string, count int) ([]*T
 			"__relay_internal__pv__BarcelonaIsLoggedInrelayprovider":     true,
 			"__relay_internal__pv__BarcelonaIsCrawlerrelayprovider":      false,
 		}
-		body, err := c.doGraphQL(ctx, "SearchUsers", docIDSearchUsers, "BarcelonaSearchUserResultsQuery", variables)
+		body, err := c.doGraphQL(ctx, flowAuthed, "SearchUsers", docIDSearchUsers, "BarcelonaSearchUserResultsQuery", variables)
 		if err != nil {
 			return nil, fmt.Errorf("SearchUsers: %w", err)
 		}
