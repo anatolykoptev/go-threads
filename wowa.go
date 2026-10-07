@@ -54,6 +54,12 @@ type wowaAction struct {
 	URL    string `json:"url,omitempty"`
 }
 
+// go-wowa / go-browser context modes used by interact.
+const (
+	wowaModeDefault = "default"
+	wowaModeProxy   = "proxy"
+)
+
 // wowaInteractRequest is the POST body for /api/v1/chrome/interact.
 type wowaInteractRequest struct {
 	URL     string       `json:"url"`
@@ -142,11 +148,17 @@ type fetchResult struct {
 func (w *wowaTransport) interact(ctx context.Context, session, pageURL string, actions []wowaAction) (json.RawMessage, error) {
 	body := wowaInteractRequest{
 		URL:     pageURL,
-		Mode:    "default",
+		Mode:    wowaModeDefault,
 		Session: session,
 		Actions: actions,
 	}
 	if w.proxy != "" {
+		// go-browser never applies a proxy to the "default" context, so a
+		// default-mode request with a proxy egresses from the host's own IP.
+		// "proxy" mode keys a persistent context on the proxy URL. Never send
+		// "proxy" with an empty proxy: go-browser would create a fresh,
+		// unproxied incognito context (key "proxy:") instead of the default one.
+		body.Mode = wowaModeProxy
 		p := w.proxy
 		body.Proxy = &p
 	}
