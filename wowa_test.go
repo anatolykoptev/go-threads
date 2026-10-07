@@ -396,7 +396,7 @@ func TestWowaTransportInteract_RequestShape(t *testing.T) {
 	defer ts.Close()
 
 	w := newWowaTransport(ts.URL, "secret", "")
-	_, err := w.interact(context.Background(), "threads-spike", "https://www.instagram.com/", []wowaAction{{Type: "evaluate", Script: "1"}})
+	_, err := w.interact(context.Background(), flowAuthed, "threads-spike", "https://www.instagram.com/", []wowaAction{{Type: "evaluate", Script: "1"}})
 	if err != nil {
 		t.Fatalf("interact: %v", err)
 	}

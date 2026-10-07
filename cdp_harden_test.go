@@ -284,13 +284,11 @@ func TestDoCDP_WithSessionID_ProceedsToFetch(t *testing.T) {
 
 // --- P2: residential proxy plumbing tests ---
 
-// TestDoCDP_ProxySet_SentInInteractRequest proves that when Config.Proxy is
-// set, the interact request carries the proxy URL.
-//
-// RED before P2: wowaInteractRequest had no Proxy field → req.Proxy is always
-// nil.
-// GREEN after P2: Proxy field threaded through → req.Proxy matches Config.Proxy.
-func TestDoCDP_ProxySet_SentInInteractRequest(t *testing.T) {
+// TestDoCDP_ProxySet_LoggedInFlowSendsNoProxy proves that a logged-in call
+// (doCDP) never carries the proxy, even when Config.Proxy is set: the Meta
+// login lives only in the default profile, which go-browser never proxies.
+// Anonymous calls are covered by TestWowaFlowRouting.
+func TestDoCDP_ProxySet_LoggedInFlowSendsNoProxy(t *testing.T) {
 	var gotProxy *string
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var req wowaInteractRequest
@@ -323,11 +321,8 @@ func TestDoCDP_ProxySet_SentInInteractRequest(t *testing.T) {
 	}
 
 	_, _ = c.doPrivateGET(context.Background(), "GetInstagramPost", "/api/v1/media/123/info/", nil)
-	if gotProxy == nil {
-		t.Fatal("expected proxy to be set in interact request, got nil")
-	}
-	if *gotProxy != "http://user:pass@p.webshare.io:10050" {
-		t.Errorf("proxy = %q, want http://user:pass@p.webshare.io:10050", *gotProxy)
+	if gotProxy != nil {
+		t.Fatalf("logged-in interact request must carry no proxy, got %q", *gotProxy)
 	}
 }
 

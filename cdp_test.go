@@ -310,7 +310,7 @@ func TestFetchPage_CDP_RedirectIsLoginRedirect(t *testing.T) {
 		t.Fatalf("NewClient: %v", err)
 	}
 
-	_, err = c.fetchPage(context.Background(), "Test", threadsBaseURL+"/@zuck/post/ABC123")
+	_, err = c.fetchPage(context.Background(), flowAnon, "Test", threadsBaseURL+"/@zuck/post/ABC123")
 	if err == nil {
 		t.Fatal("expected an error for a redirect")
 	}

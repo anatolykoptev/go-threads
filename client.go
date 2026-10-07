@@ -192,7 +192,7 @@ func isLoginRedirect(body []byte) bool {
 }
 
 // fetchPage fetches a Threads page with retry and backoff.
-func (c *Client) fetchPage(ctx context.Context, endpoint, pageURL string) ([]byte, error) {
+func (c *Client) fetchPage(ctx context.Context, flow wowaFlow, endpoint, pageURL string) ([]byte, error) {
 	if err := stealth.DefaultJitter.Sleep(ctx); err != nil {
 		return nil, err
 	}
@@ -212,7 +212,7 @@ func (c *Client) fetchPage(ctx context.Context, endpoint, pageURL string) ([]byt
 		var status int
 		var err error
 		if c.wowa != nil {
-			body, status, err = c.fetchPageCDP(ctx, pageURL)
+			body, status, err = c.fetchPageCDP(ctx, flow, pageURL)
 		} else {
 			body, _, status, err = c.bc.DoWithHeaderOrder("GET", pageURL, pageHeaders, nil, threadsHeaderOrder)
 		}
@@ -273,7 +273,7 @@ var userIDRe = regexp.MustCompile(`"user_id":"(\d+)"`)
 // Returns (userID, rawHTML, error) — HTML is returned for reuse by callers.
 func (c *Client) resolveUsername(ctx context.Context, username string) (string, []byte, error) {
 	profileURL := threadsBaseURL + "/@" + username
-	body, err := c.fetchPage(ctx, "ResolveUsername", profileURL)
+	body, err := c.fetchPage(ctx, flowAnon, "ResolveUsername", profileURL)
 	if err != nil {
 		return "", nil, fmt.Errorf("resolve username %q: %w", username, err)
 	}

@@ -47,12 +47,61 @@ func newWowaTransport(base, secret, proxy string) *wowaTransport {
 	}
 }
 
+// redact strips the configured proxy URL, and its user and password on their
+// own, from text returned by go-wowa. go-browser v0.20.9 echoed the raw
+// context key (which embeds the proxy URL) in create-tab errors, and those
+// errors reach our logs and callers.
+func (w *wowaTransport) redact(s string) string {
+	if w.proxy == "" {
+		return s
+	}
+	s = strings.ReplaceAll(s, w.proxy, "[proxy]")
+	if u, err := url.Parse(w.proxy); err == nil && u.User != nil {
+		if pw, ok := u.User.Password(); ok && pw != "" {
+			s = strings.ReplaceAll(s, pw, "[redacted]")
+		}
+		if name := u.User.Username(); name != "" {
+			s = strings.ReplaceAll(s, name, "[redacted]")
+		}
+	}
+	return s
+}
+
 // wowaAction is a single go-wowa interact action (evaluate / navigate).
 type wowaAction struct {
 	Type   string `json:"type"`
 	Script string `json:"script,omitempty"`
 	URL    string `json:"url,omitempty"`
 }
+
+// go-wowa / go-browser context modes used by interact.
+const (
+	wowaModeDefault = "default"
+	wowaModeProxy   = "proxy"
+)
+
+// wowaFlow says whether a go-wowa call needs the logged-in Meta account.
+// Every call site passes it deliberately; nothing is inferred.
+type wowaFlow int
+
+const (
+	// flowAuthed calls need the Meta login (sessionid + ds_user_id), which lives
+	// only in go-browser's default persistent profile. They always use mode
+	// "default" with no proxy and the original session name, whatever
+	// Config.Proxy says.
+	flowAuthed wowaFlow = iota + 1
+	// flowAnon calls need no login: plain page fetches (profile, post, embed).
+	// With a proxy configured they use mode "proxy" (go-browser ignores a
+	// proxy in "default" mode) on a distinct "<session>-anon" tab, so one
+	// named tab never alternates between contexts. Without a proxy they are
+	// identical to flowAuthed. Live-checked logged out on 2026-10-07: the
+	// GraphQL queries (profile-by-id, threads tab, replies tab, likers) return
+	// no data without the login, so every GraphQL call is flowAuthed.
+	flowAnon
+)
+
+// wowaAnonSuffix is appended to the session name of proxied anonymous calls.
+const wowaAnonSuffix = "-anon"
 
 // wowaInteractRequest is the POST body for /api/v1/chrome/interact.
 type wowaInteractRequest struct {
@@ -139,14 +188,22 @@ type fetchResult struct {
 
 // interact POSTs to go-wowa's /api/v1/chrome/interact with the given actions
 // and returns the last action's result data.
-func (w *wowaTransport) interact(ctx context.Context, session, pageURL string, actions []wowaAction) (json.RawMessage, error) {
+func (w *wowaTransport) interact(ctx context.Context, flow wowaFlow, session, pageURL string, actions []wowaAction) (json.RawMessage, error) {
 	body := wowaInteractRequest{
 		URL:     pageURL,
-		Mode:    "default",
+		Mode:    wowaModeDefault,
 		Session: session,
 		Actions: actions,
 	}
-	if w.proxy != "" {
+	if flow == flowAnon && w.proxy != "" {
+		// go-browser never applies a proxy to the "default" context, so a
+		// default-mode request with a proxy egresses from the host's own IP.
+		// "proxy" mode runs in a disposable incognito context keyed on the
+		// proxy URL (no login, no persistence). Never send "proxy" with an
+		// empty proxy: go-browser would create an unproxied incognito context
+		// (key "proxy:") instead of the default one.
+		body.Mode = wowaModeProxy
+		body.Session = session + wowaAnonSuffix
 		p := w.proxy
 		body.Proxy = &p
 	}
@@ -174,7 +231,7 @@ func (w *wowaTransport) interact(ctx context.Context, session, pageURL string, a
 		return nil, fmt.Errorf("read interact response: %w", err)
 	}
 	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("go-wowa status %d: %s", resp.StatusCode, truncate(string(raw), 200))
+		return nil, fmt.Errorf("go-wowa status %d: %s", resp.StatusCode, truncate(w.redact(string(raw)), 200))
 	}
 
 	var ir wowaInteractResponse
@@ -182,14 +239,14 @@ func (w *wowaTransport) interact(ctx context.Context, session, pageURL string, a
 		return nil, fmt.Errorf("unmarshal interact response: %w", err)
 	}
 	if ir.Status != "ok" {
-		return nil, fmt.Errorf("go-wowa interact status %q: %s", ir.Status, ir.Error)
+		return nil, fmt.Errorf("go-wowa interact status %q: %s", ir.Status, w.redact(ir.Error))
 	}
 	if len(ir.Actions) == 0 {
 		return nil, fmt.Errorf("go-wowa returned no actions")
 	}
 	last := ir.Actions[len(ir.Actions)-1]
 	if !last.Ok {
-		return nil, fmt.Errorf("go-wowa action %q failed: %s", last.Action, last.Error)
+		return nil, fmt.Errorf("go-wowa action %q failed: %s", last.Action, w.redact(last.Error))
 	}
 	return last.Data, nil
 }
@@ -267,7 +324,7 @@ func buildFetchScript(endpoint, method, body, appID, lsd, asbdID, friendlyName s
 // returns the fetchResult for the caller to classify.
 func (c *Client) wowaFetchOnce(ctx context.Context, session, pageURL, script string) (fetchResult, error) {
 	var fr fetchResult
-	res, err := c.wowa.interact(ctx, session, pageURL, []wowaAction{{Type: "evaluate", Script: script}})
+	res, err := c.wowa.interact(ctx, flowAuthed, session, pageURL, []wowaAction{{Type: "evaluate", Script: script}})
 	if err != nil {
 		return fr, fmt.Errorf("go-wowa interact: %w", err)
 	}
@@ -277,7 +334,7 @@ func (c *Client) wowaFetchOnce(ctx context.Context, session, pageURL, script str
 	}
 
 	if fr.Redirected || fr.Status == 302 || fr.Status == 0 {
-		retryRes, rerr := c.wowa.interact(ctx, session, pageURL, []wowaAction{
+		retryRes, rerr := c.wowa.interact(ctx, flowAuthed, session, pageURL, []wowaAction{
 			{Type: "navigate", URL: pageURL},
 			{Type: "evaluate", Script: script},
 		})
@@ -365,7 +422,7 @@ func detectChallenge(body string) string {
 // logged-in account's user id; it is present iff the tab is authenticated and
 // absent when logged out (verified live on a logged-in cloakbrowser profile).
 func (c *Client) checkSessionCookie(ctx context.Context, session, pageURL string) error {
-	res, err := c.wowa.interact(ctx, session, pageURL, []wowaAction{
+	res, err := c.wowa.interact(ctx, flowAuthed, session, pageURL, []wowaAction{
 		{Type: "evaluate", Script: "document.cookie"},
 	})
 	if err != nil {
@@ -498,7 +555,7 @@ func (c *Client) doGraphQLCDP(ctx context.Context, endpoint, bodyStr, lsd, frien
 // fetchPageCDP navigates to an arbitrary page URL through go-wowa and returns
 // the rendered page HTML (document.documentElement.outerHTML). It returns 200
 // on success, or 302 if the page contains a login redirect.
-func (c *Client) fetchPageCDP(ctx context.Context, pageURL string) ([]byte, int, error) {
+func (c *Client) fetchPageCDP(ctx context.Context, flow wowaFlow, pageURL string) ([]byte, int, error) {
 	if err := c.cdpThrottle(ctx, pageURL); err != nil {
 		return nil, 0, err
 	}
@@ -506,7 +563,7 @@ func (c *Client) fetchPageCDP(ctx context.Context, pageURL string) ([]byte, int,
 		{Type: "navigate", URL: pageURL},
 		{Type: "evaluate", Script: "document.documentElement.outerHTML"},
 	}
-	res, err := c.wowa.interact(ctx, c.nextSession(), pageURL, actions)
+	res, err := c.wowa.interact(ctx, flow, c.nextSession(), pageURL, actions)
 	if err != nil {
 		return nil, 0, fmt.Errorf("go-wowa interact: %w", err)
 	}

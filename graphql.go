@@ -119,7 +119,7 @@ func (c *Client) GetUserWithThreads(ctx context.Context, username string, count 
 // The code is the short identifier in the URL: threads.net/@user/post/{code}
 func (c *Client) GetThread(ctx context.Context, username, postCode string) (*Thread, []*Thread, error) {
 	postURL := fmt.Sprintf("%s/@%s/post/%s", threadsBaseURL, username, postCode)
-	html, err := c.fetchPage(ctx, "GetThread", postURL)
+	html, err := c.fetchPage(ctx, flowAnon, "GetThread", postURL)
 	if err != nil {
 		return nil, nil, fmt.Errorf("GetThread: %w", err)
 	}
@@ -325,7 +325,7 @@ func (c *Client) GetUserReplies(ctx context.Context, username string, count int)
 	}
 
 	repliesURL := threadsBaseURL + "/@" + username + "/replies"
-	html, err := c.fetchPage(ctx, "GetUserReplies", repliesURL)
+	html, err := c.fetchPage(ctx, flowAnon, "GetUserReplies", repliesURL)
 	if err != nil {
 		return nil, fmt.Errorf("GetUserReplies: %w", err)
 	}
