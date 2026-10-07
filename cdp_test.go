@@ -275,7 +275,7 @@ func TestDoGraphQL_CDP_RedirectIsLoginRedirect(t *testing.T) {
 	c.lsd = "AVqDh-2lkJ8"
 	c.lsdAt = time.Now()
 
-	_, err = c.doGraphQL(context.Background(), flowAnon, "Test", docIDGetThreadLikers, "BarcelonaMediaLikersQuery", map[string]any{"mediaID": "123"})
+	_, err = c.doGraphQL(context.Background(), "Test", docIDGetThreadLikers, "BarcelonaMediaLikersQuery", map[string]any{"mediaID": "123"})
 	if err == nil {
 		t.Fatal("expected an error for a redirect")
 	}

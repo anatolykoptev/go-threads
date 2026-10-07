@@ -42,9 +42,6 @@ type Client struct {
 	fbDtsg string // Facebook DTSG token (empty without login, populated with session cookies)
 	lsdMu  sync.Mutex
 	lsdAt  time.Time
-	// Separate LSD cache for proxied anonymous calls (different browser context).
-	anonLSD, anonFbDtsg string
-	anonLSDAt           time.Time
 
 	// Auth state (Private API)
 	token  string // "IGT:2:<token>"
@@ -289,7 +286,7 @@ func (c *Client) resolveUsername(ctx context.Context, username string) (string, 
 }
 
 // doGraphQL sends a GraphQL POST to the Threads API.
-func (c *Client) doGraphQL(ctx context.Context, flow wowaFlow, endpoint, docID, friendlyName string, variables map[string]any) ([]byte, error) {
+func (c *Client) doGraphQL(ctx context.Context, endpoint, docID, friendlyName string, variables map[string]any) ([]byte, error) {
 	varsJSON, err := json.Marshal(variables)
 	if err != nil {
 		return nil, fmt.Errorf("%s: marshal variables: %w", endpoint, err)
@@ -306,7 +303,7 @@ func (c *Client) doGraphQL(ctx context.Context, flow wowaFlow, endpoint, docID, 
 			}
 		}
 
-		lsd, fbDtsg, lsdErr := c.ensureLSD(ctx, flow)
+		lsd, lsdErr := c.ensureLSD(ctx)
 		if lsdErr != nil {
 			if errors.Is(lsdErr, errRateLimitHold) {
 				return nil, fmt.Errorf("%s: %w", endpoint, lsdErr)
@@ -319,9 +316,9 @@ func (c *Client) doGraphQL(ctx context.Context, flow wowaFlow, endpoint, docID, 
 		form.Set("lsd", lsd)
 		form.Set("doc_id", docID)
 		form.Set("variables", string(varsJSON))
-		if fbDtsg != "" {
-			form.Set("fb_dtsg", fbDtsg)
-			form.Set("jazoest", computeJazoest(fbDtsg))
+		if c.fbDtsg != "" {
+			form.Set("fb_dtsg", c.fbDtsg)
+			form.Set("jazoest", computeJazoest(c.fbDtsg))
 		}
 		form.Set("__a", "1")
 		form.Set("__comet_req", "29")
@@ -331,7 +328,7 @@ func (c *Client) doGraphQL(ctx context.Context, flow wowaFlow, endpoint, docID, 
 		var status int
 		var doErr error
 		if c.wowa != nil {
-			respBody, status, doErr = c.doGraphQLCDP(ctx, flow, endpoint, bodyStr, lsd, friendlyName)
+			respBody, status, doErr = c.doGraphQLCDP(ctx, endpoint, bodyStr, lsd, friendlyName)
 		} else {
 			headers := requestHeaders(lsd, friendlyName)
 			if cookies := c.buildCookieHeader(); cookies != "" {
@@ -363,7 +360,9 @@ func (c *Client) doGraphQL(ctx context.Context, flow wowaFlow, endpoint, docID, 
 			return respBody, nil
 		case errForbidden:
 			// Clear LSD to force refresh on next attempt
-			c.invalidateLSD(flow)
+			c.lsdMu.Lock()
+			c.lsd = ""
+			c.lsdMu.Unlock()
 			c.recordMetrics(endpoint, false)
 			lastErr = &APIError{Status: status, Class: errClass, Message: "forbidden (stale LSD?)"}
 			continue

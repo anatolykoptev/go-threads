@@ -38,7 +38,7 @@ func (c *Client) SearchPosts(ctx context.Context, query string, opts SearchPosts
 	if c.wowa == nil {
 		return nil, fmt.Errorf("SearchPosts: WowaURL not configured — keyword post search has no Private API fallback")
 	}
-	body, err := c.doGraphQL(ctx, flowAuthed, "SearchPosts", docIDSearchPosts, friendlySearchPosts, searchPostsVariables(query, opts.Mode))
+	body, err := c.doGraphQL(ctx, "SearchPosts", docIDSearchPosts, friendlySearchPosts, searchPostsVariables(query, opts.Mode))
 	if err != nil {
 		return nil, fmt.Errorf("SearchPosts: %w", err)
 	}
