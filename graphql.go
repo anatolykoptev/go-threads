@@ -8,7 +8,7 @@ import (
 
 // GetUser fetches a user profile by username.
 // With Config.WowaURL set it uses the GraphQL API through the CDP transport;
-// otherwise it falls back to SSR page scraping.
+// otherwise it falls back to SSR page parsing.
 func (c *Client) GetUser(ctx context.Context, username string) (*ThreadsUser, error) {
 	_, html, err := c.resolveUsername(ctx, username)
 	if err != nil {
@@ -43,7 +43,7 @@ func (c *Client) GetUserByID(ctx context.Context, userID string) (*ThreadsUser, 
 
 // GetUserThreads fetches recent threads by username.
 // With Config.WowaURL set it uses the GraphQL API through the CDP transport;
-// otherwise it falls back to SSR page scraping.
+// otherwise it falls back to SSR page parsing.
 func (c *Client) GetUserThreads(ctx context.Context, username string, count int) ([]*Thread, error) {
 	if c.wowa != nil {
 		userID, _, err := c.resolveUsername(ctx, username)
@@ -81,7 +81,7 @@ func (c *Client) GetUserThreads(ctx context.Context, username string, count int)
 
 // GetUserWithThreads fetches both user profile and threads.
 // With Config.WowaURL set it composes two GraphQL calls through the CDP
-// transport; otherwise it falls back to SSR page scraping.
+// transport; otherwise it falls back to SSR page parsing.
 func (c *Client) GetUserWithThreads(ctx context.Context, username string, count int) (*ThreadsUser, []*Thread, error) {
 	if c.wowa != nil {
 		user, err := c.GetUser(ctx, username)
@@ -302,7 +302,7 @@ func parseThreadMedia(html []byte, wantCode string) (*Thread, []*Thread, error) 
 
 // GetUserReplies fetches reply threads by username.
 // With Config.WowaURL set it uses the GraphQL API through the CDP transport;
-// otherwise it falls back to SSR page scraping.
+// otherwise it falls back to SSR page parsing.
 func (c *Client) GetUserReplies(ctx context.Context, username string, count int) ([]*Thread, error) {
 	if c.wowa != nil {
 		userID, _, err := c.resolveUsername(ctx, username)
