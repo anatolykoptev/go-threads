@@ -23,7 +23,7 @@ import (
 
 const maxRetries = 3
 
-// Client is the Threads scraping client.
+// Client is the Threads client.
 type Client struct {
 	bc      *stealth.BrowserClient
 	wowa    *wowaTransport // CDP in-page-fetch transport via go-wowa; nil = stealth fallback
@@ -269,7 +269,7 @@ func (c *Client) recordMetrics(endpoint string, success bool) {
 
 var userIDRe = regexp.MustCompile(`"user_id":"(\d+)"`)
 
-// resolveUsername fetches the userID for a given username by scraping the profile page.
+// resolveUsername fetches the userID for a given username by parsing the profile page.
 // Returns (userID, rawHTML, error) — HTML is returned for reuse by callers.
 func (c *Client) resolveUsername(ctx context.Context, username string) (string, []byte, error) {
 	profileURL := threadsBaseURL + "/@" + username
